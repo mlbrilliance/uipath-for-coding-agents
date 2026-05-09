@@ -1,0 +1,6 @@
+{
+  "ProjectType": "Function",
+  "Name": "aurora-vuln-lookup",
+  "Description": "AURORA Coded Agent — cross-references lockfile dependencies against NVD, OSV, and GitHub Advisory and emits structured findings.",
+  "MainFile": null
+}

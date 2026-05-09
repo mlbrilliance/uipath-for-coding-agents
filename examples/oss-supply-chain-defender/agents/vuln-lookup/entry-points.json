@@ -1,0 +1,20 @@
+{
+    "$schema": "https://cloud.uipath.com/draft/2024-12/entry-point",
+    "$id": "entry-points.json",
+    "entryPoints": [
+        {
+            "filePath": "main.py",
+            "uniqueId": "main",
+            "type": "function",
+            "input": {},
+            "output": {}
+        },
+        {
+            "filePath": "main.py",
+            "uniqueId": "triage",
+            "type": "function",
+            "input": {},
+            "output": {}
+        }
+    ]
+}
