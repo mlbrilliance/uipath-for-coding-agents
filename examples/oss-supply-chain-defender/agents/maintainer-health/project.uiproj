@@ -1,0 +1,6 @@
+{
+  "ProjectType": "Function",
+  "Name": "aurora-maintainer-health",
+  "Description": "AURORA Coded Agent \u2014 OpenAI Agents framework. Computes maintainer health for lockfile dependencies via OpenSSF Scorecard and commit-recency signals.",
+  "MainFile": null
+}
