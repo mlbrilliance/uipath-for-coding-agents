@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AURORA contract-test fixture (NOT a real Maestro process).
+  Bindings live in sample_bindings.json next to this file (T-A2).
+-->
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    id="Sample_Definitions"
+    targetNamespace="https://aurora.test/sample">
+
+  <bpmn:process id="SampleProcess" name="Sample Process" isExecutable="true">
+
+    <bpmn:startEvent id="Start"><bpmn:outgoing>Flow_Start_Fetch</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Fetch" sourceRef="Start" targetRef="FetchData" />
+
+    <bpmn:serviceTask id="FetchData" name="Fetch data">
+      <bpmn:incoming>Flow_Start_Fetch</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fetch_Approve</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Fetch_Approve" sourceRef="FetchData" targetRef="ApproveAction" />
+
+    <bpmn:userTask id="ApproveAction" name="Approve action">
+      <bpmn:incoming>Flow_Fetch_Approve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="ApprovalTimer" attachedToRef="ApproveAction" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>PT4H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+
+    <bpmn:sequenceFlow id="Flow_Approve_End" sourceRef="ApproveAction" targetRef="End" />
+    <bpmn:endEvent id="End"><bpmn:incoming>Flow_Approve_End</bpmn:incoming></bpmn:endEvent>
+
+  </bpmn:process>
+</bpmn:definitions>

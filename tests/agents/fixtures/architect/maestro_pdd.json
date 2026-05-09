@@ -1,0 +1,16 @@
+{
+  "candidate_id": "CAND-MAESTRO-001",
+  "process_name": "OSS Supply-Chain Defender",
+  "actor_types": ["agent", "rpa", "human"],
+  "trigger": "timer",
+  "needs_ui_automation": true,
+  "needs_reasoning": true,
+  "needs_human_approval": true,
+  "data_volume": "moderate",
+  "summary": "Monitor a GitHub org's dependency graph, triage vulnerabilities against public feeds, and ship patches with HITL gates on production-affecting fixes.",
+  "acceptance_criteria": [
+    "Scan completes in < 5 min for 100 repos",
+    "Critical findings always reach Action Center within 4h",
+    "High findings auto-PR within one cycle"
+  ]
+}
