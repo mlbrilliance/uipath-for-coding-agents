@@ -21,6 +21,9 @@ EXCLUDED_PATHS = {
     "tasks.md",
     "PDD.md",
     "tests/lint/test_no_fictional_uip_cli.py",
+    # `banned_patterns.py` documents the regex itself; the literal word
+    # `uip` in its rationale comment is its raison d'être.
+    "tests/agents/banned_patterns.py",
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "local_cache", ".pytest_cache", "node_modules"}
