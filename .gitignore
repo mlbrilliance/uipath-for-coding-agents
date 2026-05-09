@@ -27,6 +27,12 @@ build/
 *.nupkg
 .local/
 
+# .NET / C# build artifacts (Coded Workflows)
+bin/
+obj/
+*.user
+*.suo
+
 # Node
 node_modules/
 package-lock.json
