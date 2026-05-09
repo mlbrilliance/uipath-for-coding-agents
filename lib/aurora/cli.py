@@ -86,8 +86,13 @@ def cmd_status(args: argparse.Namespace) -> int:
             print(f"AURORA — {snapshot['agents']}")
         return 0
 
-    # Full TUI (Textual). For brevity in v1 we just instruct the user to use --once.
-    print("[aurora] TUI dashboard not yet implemented; use --once or --json")
+    # Full TUI (Textual) — only when stdout is a real TTY. Falls through to the
+    # JSON snapshot otherwise so piped/scripted invocations stay deterministic.
+    if not sys.stdout.isatty():
+        return cmd_status(argparse.Namespace(**{**vars(args), "json": True, "once": True}))
+
+    from aurora.tui.app import AuroraStatusApp
+    AuroraStatusApp().run()
     return 0
 
 
