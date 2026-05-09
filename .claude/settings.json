@@ -46,7 +46,7 @@
   },
   "permissions": {
     "allow": [
-      "Bash(uip *)",
+      "Bash(uipath *)",
       "Bash(uv *)",
       "Bash(git *)",
       "Bash(curl https://api.github.com/*)",

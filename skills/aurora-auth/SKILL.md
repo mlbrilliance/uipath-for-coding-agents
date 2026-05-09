@@ -1,11 +1,11 @@
 ---
 name: aurora-auth
-description: Mint and refresh UiPath Automation Cloud OAuth tokens via the External Application client-credentials grant. Reads UIPATH_CLIENT_ID and UIPATH_CLIENT_SECRET from .env, requests the scope list from policy.yaml::uipath_scopes, writes the live access token to UIPATH_ACCESS_TOKEN so the uip CLI can use it without re-auth, and refreshes proactively before the 1-hour expiry. Use this skill at the start of every Conductor run, before any uip CLI or uipath-python SDK call, and whenever Sentry emits a `kind: auth_failed` event.
+description: Mint and refresh UiPath Automation Cloud OAuth tokens via the External Application client-credentials grant. Reads UIPATH_CLIENT_ID and UIPATH_CLIENT_SECRET from .env, requests the scope list from policy.yaml::uipath_scopes, writes the live access token to UIPATH_ACCESS_TOKEN so the uipath CLI can use it without re-auth, and refreshes proactively before the 1-hour expiry. Use this skill at the start of every Conductor run, before any uipath CLI or uipath-python SDK call, and whenever Sentry emits a `kind: auth_failed` event.
 ---
 
 # aurora-auth
 
-UiPath Automation Cloud uses OAuth 2.0 with the client-credentials grant for confidential External Applications. AURORA mints tokens at runtime — never relies on a stale `UIPATH_ACCESS_TOKEN` in `.env` — and writes them back so the `uip` CLI and `uipath-python` SDK both see fresh credentials.
+UiPath Automation Cloud uses OAuth 2.0 with the client-credentials grant for confidential External Applications. AURORA mints tokens at runtime — never relies on a stale `UIPATH_ACCESS_TOKEN` in `.env` — and writes them back so the `uipath` CLI and `uipath-python` SDK both see fresh credentials.
 
 ## When to invoke
 

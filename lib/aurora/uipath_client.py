@@ -1,9 +1,9 @@
-"""Wrapper around the UiPath Python SDK + `uip` CLI.
+"""Wrapper around the UiPath Python SDK + `uipath` CLI.
 
 Centralizes:
     - Token-aware SDK construction (uses aurora.auth.ensure_fresh_token)
     - Scoped helpers — folders, jobs, queues, assets, tasks, processes, Maestro
-    - `uip` CLI shellouts (init, run, pack, publish) with sane error handling
+    - `uipath` CLI shellouts (init, run, pack, publish) with sane error handling
 
 Most agents and daemons reach the platform through this module. Direct
 imports of `uipath` are discouraged outside this file so we have one place
@@ -34,7 +34,7 @@ class FolderRef:
 
 
 class UiPathClient:
-    """Thin wrapper around `uipath.UiPath` + `uip` CLI.
+    """Thin wrapper around `uipath.UiPath` + `uipath` CLI.
 
     The actual UiPath SDK class is imported lazily so tests / mocks don't
     have to install the full uipath package up front.
@@ -194,16 +194,19 @@ class UiPathClient:
         users = r.json().get("value", [])
         return users[0]["Id"] if users else None
 
-    # ---------- uip CLI shellouts ----------
+    # ---------- uipath CLI shellouts ----------
 
-    def uip(self, *args: str, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess:
-        """Invoke `uip` CLI with the live access token in the environment.
+    def uipath_cli(self, *args: str, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess:
+        """Invoke `uipath` CLI with the live access token in the environment.
 
-        `uip` reads UIPATH_ACCESS_TOKEN from env. We refresh before invoking so
+        `uipath` reads UIPATH_ACCESS_TOKEN from env. We refresh before invoking so
         long-running daemons survive token expiry without re-authing.
+
+        Method name is `uipath_cli` (not `uipath`) to avoid shadowing the
+        imported `uipath` Python module at call sites.
         """
         ensure_fresh_token(write_dotenv_path=self.dotenv_path)
-        cmd = ["uip", *args]
+        cmd = ["uipath", *args]
         logger.info("running: %s", shlex.join(cmd))
         return subprocess.run(  # noqa: S603
             cmd,
@@ -216,11 +219,11 @@ class UiPathClient:
 
     def publish(self, project_dir: Path, *, folder: Optional[str] = None) -> str:
         """Pack and publish a project. Returns the package version published."""
-        self.uip("pack", cwd=project_dir)
+        self.uipath_cli("pack", cwd=project_dir)
         args = ["publish"]
         if folder:
             args.extend(["--folder", folder])
-        result = self.uip(*args, cwd=project_dir)
+        result = self.uipath_cli(*args, cwd=project_dir)
         return result.stdout.strip()
 
 

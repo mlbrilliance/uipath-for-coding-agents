@@ -47,20 +47,20 @@ fi
 # ---------- 2. UiPath CLI ----------
 
 step "2/10  Installing @uipath/cli"
-if ! command -v uip >/dev/null 2>&1; then
+if ! command -v uipath >/dev/null 2>&1; then
     npm install -g @uipath/cli
 else
-    echo "    @uipath/cli already installed: $(uip --version 2>/dev/null || echo unknown)"
+    echo "    @uipath/cli already installed: $(uipath --version 2>/dev/null || echo unknown)"
 fi
 
 # ---------- 3. Official UiPath skills ----------
 
 step "3/10  Installing official UiPath skills"
-echo "    Run \`uip skills install\` from this directory and select all seven skills."
-read -r -p "    Run uip skills install now? [Y/n] " yn
+echo "    Run \`uipath skills install\` from this directory and select all seven skills."
+read -r -p "    Run uipath skills install now? [Y/n] " yn
 case "${yn:-y}" in
-    [Yy]*)  uip skills install || warn "uip skills install non-zero; continuing" ;;
-    *)      echo "    Skipping. Re-run \`uip skills install\` later." ;;
+    [Yy]*)  uipath skills install || warn "uipath skills install non-zero; continuing" ;;
+    *)      echo "    Skipping. Re-run \`uipath skills install\` later." ;;
 esac
 
 # ---------- 4. .env initialization ----------

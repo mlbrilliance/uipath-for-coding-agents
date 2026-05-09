@@ -49,15 +49,15 @@ else
 fi
 
 echo "[break] GITHUB_TOKEN set to invalid value"
-echo "[break] now triggering a manual Maestro instance via uip CLI..."
+echo "[break] now triggering a manual Maestro instance via uipath CLI..."
 
-# Try to start an instance via the uip CLI; fall back to a SDK invocation if
-# uip isn't on PATH or the process isn't deployed yet.
-if command -v uip >/dev/null 2>&1; then
-    if uip maestro start --process OssSupplyChainDefender --folder AURORA-Demo >/dev/null 2>&1; then
+# Try to start an instance via the uipath CLI; fall back to a SDK invocation if
+# uipath isn't on PATH or the process isn't deployed yet.
+if command -v uipath >/dev/null 2>&1; then
+    if uipath maestro start --process OssSupplyChainDefender --folder AURORA-Demo >/dev/null 2>&1; then
         echo "[break] Maestro instance started"
     else
-        echo "[break] uip maestro start failed; trying python fallback"
+        echo "[break] uipath maestro start failed; trying python fallback"
         uv run python -m aurora.cli recall "tickle the demo" --limit 0 || true
         cat <<'EOF'
 [break] No Maestro instance started — you can either:

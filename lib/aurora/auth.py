@@ -9,7 +9,7 @@ Token lifecycle:
     1. mint_token()          — POST to /identity_/connect/token
     2. get_cached_token()    — read sidecar at ~/.uipath/aurora-token.json
     3. ensure_fresh_token()  — refresh if within TOKEN_BUFFER_SECONDS of expiry
-    4. write_to_dotenv()     — keep .env in sync so `uip` CLI sees the token
+    4. write_to_dotenv()     — keep .env in sync so `uipath` CLI sees the token
 """
 from __future__ import annotations
 
@@ -162,7 +162,7 @@ def ensure_fresh_token(
 ) -> Token:
     """Return a token that's not within TOKEN_BUFFER_SECONDS of expiry.
 
-    Mints if cached is missing or stale. The dotenv-write keeps `uip` CLI happy.
+    Mints if cached is missing or stale. The dotenv-write keeps `uipath` CLI happy.
     """
     cached = get_cached_token()
     if cached and not cached.needs_refresh:

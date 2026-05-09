@@ -28,7 +28,7 @@ Prereqs: Ubuntu VPS with Node.js 18+, Python 3.11+, `git`, `uv`, and `claude` CL
 ```bash
 # 1. Install UiPath toolchain
 npm install -g @uipath/cli
-uip skills install     # interactive — pick all seven UiPath skills
+uipath skills install     # interactive — pick all seven UiPath skills
 
 # 2. Clone and configure
 git clone https://github.com/aurora-demo-org/uipath-for-coding-agents.git

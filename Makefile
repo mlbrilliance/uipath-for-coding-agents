@@ -14,9 +14,9 @@ PYTEST := uv run pytest
 bootstrap:    ## One-shot setup (deps, plugin, validate, tests)
 	bash scripts/bootstrap.sh
 
-install:      ## uv sync + uip skills
+install:      ## uv sync + uipath skills
 	uv sync
-	uip skills install || true
+	uipath skills install || true
 
 ## ---------- Run ----------
 

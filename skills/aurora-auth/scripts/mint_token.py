@@ -141,7 +141,7 @@ def main() -> int:
     access = token["access_token"]
     expires_at = int(time.time()) + int(token.get("expires_in", 3600))
 
-    # Write to .env so uip CLI sees it
+    # Write to .env so uipath CLI sees it
     if dotenv_path:
         write_env_var(dotenv_path, "UIPATH_ACCESS_TOKEN", access)
 

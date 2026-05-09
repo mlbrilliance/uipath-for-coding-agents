@@ -57,7 +57,7 @@ Composition (when Maestro):
 
 ## Test strategy
 - Test Manager: 12 cases (4 per severity bucket × 3 happy/edge/error)
-- Local validation: `uip run` per Forger output before merge
+- Local validation: `uipath run` per Forger output before merge
 
 ## HITL gates that will fire
 - prod_publish (always)

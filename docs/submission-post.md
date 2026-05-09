@@ -13,7 +13,7 @@ A 19-agent coding-agent swarm that doesn't just *build* a UiPath automation — 
 
 The demo target is **OSS Supply-Chain Defender**: a Maestro-orchestrated agentic process that monitors a GitHub organization's dependency lockfiles against NVD, OSV, and the GitHub Advisory Database, triages findings against a DMN severity matrix, and ships patches with HITL gates on production-affecting fixes. Every UiPath actor type collaborates: RPA bots (XAML), Coded Workflows (C#), Coded Agents (Python LangGraph + OpenAI Agents SDK), DMN decisions, and humans in Action Center. Every BPMN construct that matters is exercised: timer-start, parallel + exclusive gateways, business-rule task, user task with boundary timer, send/receive tasks, sub-process.
 
-100% public data sources. Built on the official `uipath-python` SDK, `UiPath/skills` skill catalog, and `uip` CLI. Inference via Claude subscription OAuth — no API key.
+100% public data sources. Built on the official `uipath-python` SDK, `UiPath/skills` skill catalog, and `uipath` CLI. Inference via Claude subscription OAuth — no API key.
 
 ---
 
@@ -45,7 +45,7 @@ The demo target is **OSS Supply-Chain Defender**: a Maestro-orchestrated agentic
 **The three concurrent loops never pause for each other.** While Build is shipping a new bot, Operate is healing a previously-shipped one, and Discovery is scoring tomorrow's candidates from a configured Slack channel.
 
 Built on:
-- `uip` CLI (`@uipath/cli`)
+- `uipath` CLI (`@uipath/cli`)
 - `UiPath/uipath-python` SDK (every Orchestrator interaction goes through it)
 - `UiPath/skills` — the seven official skills, all installed
 - Custom: 10 AURORA skills, 19 subagent definitions, 4 hooks, 5 slash-commands, 1 MCP server
@@ -150,9 +150,9 @@ cp .env.example .env  # fill in UIPATH_*, GITHUB_*, AURORA_*
 claude login                                   # subscription OAuth
 ln -s CLAUDE.md AGENTS.md                      # for Codex/Cursor compat
 
-# 3. Install deps (uses uv for Python; npm for the uip CLI)
+# 3. Install deps (uses uv for Python; npm for the uipath CLI)
 npm install -g @uipath/cli
-uip skills install                             # interactive — pick all 7
+uipath skills install                             # interactive — pick all 7
 uv sync
 
 # 4. Install AURORA itself as a Claude Code plugin
@@ -203,7 +203,7 @@ MIT. PRs welcome — especially for the v0.2 stubs (sandbox replay, full TUI das
 
 ## Acknowledgments
 
-- **UiPath product team** for `uipath/skills`, the `uip` CLI, and the `uipath-python` SDK
+- **UiPath product team** for `uipath/skills`, the `uipath` CLI, and the `uipath-python` SDK
 - **@alexandru** and **@Simona_Boboc** for shaping this challenge
 - Pattern inspirations (no code reused, only ideas): Obra Superpowers, Matt Pocock skills, Ouroboros, Factory.ai Missions
 - The community feedback that turned my early "just one more bot" prototype into a swarm

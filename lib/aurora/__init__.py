@@ -13,7 +13,7 @@ Key entrypoints:
 
 Cross-cutting:
     aurora.auth             — UiPath OAuth client-credentials minting + refresh
-    aurora.uipath_client    — uipath-python SDK + uip CLI wrapper
+    aurora.uipath_client    — uipath-python SDK + uipath CLI wrapper
     aurora.memory           — three-tier memory store
     aurora.fingerprint      — failure clustering
     aurora.policy           — policy.yaml loader / validator / dry-run

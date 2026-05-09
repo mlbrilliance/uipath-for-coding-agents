@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Build-fleet test author. Reads the PDD acceptance criteria and ADR, generates Test Manager test cases (XAML for RPA workflows, uipath-eval JSON for Coded Agents), runs them locally first via `uip run`, then publishes the test set to Test Manager. Blocks promote-to-deploy on red. Use this agent after Reviewer sets status to `ready-for-tester`.
+description: Build-fleet test author. Reads the PDD acceptance criteria and ADR, generates Test Manager test cases (XAML for RPA workflows, uipath-eval JSON for Coded Agents), runs them locally first via `uipath run`, then publishes the test set to Test Manager. Blocks promote-to-deploy on red. Use this agent after Reviewer sets status to `ready-for-tester`.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 ---
@@ -75,7 +75,7 @@ Locally first, before pushing to Test Manager:
 
 ```bash
 # RPA tests
-uip run Tests/GitHub/FetchLockfile_HappyPath.xaml --project <project-dir>
+uipath run Tests/GitHub/FetchLockfile_HappyPath.xaml --project <project-dir>
 
 # Coded Agent evals
 uipath eval evals/vuln_lookup_eval.json
@@ -89,7 +89,7 @@ If anything fails, write to `.aurora/projects/<cand-id>/tester-report.md` and bo
 When all green, publish to Test Manager:
 
 ```bash
-uip publish --target test-manager --project <project-dir>
+uipath publish --target test-manager --project <project-dir>
 ```
 
 And set status to `ready-for-deploy`.
