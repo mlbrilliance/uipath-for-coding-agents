@@ -6,27 +6,45 @@
     xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
     xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
     xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger"
+    xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common"
     xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib"
     xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib"
+    xmlns:ssec="clr-namespace:System.Security;assembly=System.Private.CoreLib"
     xmlns:ui="http://schemas.uipath.com/workflow/activities"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!--
-    AURORA — License drift checker (XAML, fixture).
+    AURORA - License drift checker (XAML).
 
-    Compares declared license metadata against the licenses pulled in
-    transitively for each lockfile. Emits `conflicts` (DataTable) for the
-    Maestro process to consume.
+    Two-tier license lookup per docs/grill-2026-05-09.md::D6 (US-38).
 
-    Discipline:
-      - Try/Catch wraps the external HTTP call
-      - RetryScope wraps the API request
-      - Config-driven URL (Config.xlsx::Settings::LicenseDataApi)
-      - Logging bookends
-      - Strict naming: in_/out_/io_ args; PascalCase variables
+      1. PRIMARY: ClearlyDefined.io
+         Default base: https://api.clearlydefined.io
+         Path: /definitions/{type}/{provider}/{namespace}/{name}/{revision}
+         No auth; returns SPDX `licensed.declared`.
+         The base is read at runtime from Config.xlsx::Settings::ClearlyDefinedApiBase
+         so non-prod environments can point at a mirror; the literal URL is
+         documented here only for human reviewers.
 
-    NOTE: this is a minimal, educational stub. A real implementation
-    consults a license-data API and runs SPDX compatibility analysis.
+      2. FALLBACK: GitHub Licenses API
+         Default base: https://api.github.com
+         Path: /repos/{owner}/{repo}/license
+         Auth: Bearer GitHubToken (GetRobotCredential).
+         Used only when ClearlyDefined returns 404 or empty `licensed.declared`.
+         The base is read at runtime from Config.xlsx::Settings::GitHubApiBase.
+
+    Output: out_dt_Conflicts (DataTable) with columns:
+      Package, DeclaredLicense, TransitiveLicense, ConflictType.
+
+    Discipline (.claude/rules/aurora-conventions.md):
+      - R.E.01 Try/Catch wraps every HTTP boundary
+      - R.E.02 RetryScope (NumberOfRetries=3, RetryInterval=00:00:05)
+      - R.E.03 4xx auth failures are NOT retried (rethrown as BusinessException)
+      - R.X.02 GitHubToken via GetRobotCredential, never inline
+      - R.C.01 URLs from Config.xlsx::Settings (ClearlyDefinedApiBase, GitHubApiBase)
+      - R.L.01 LogMessage bookends
+      - R.N.02 Argument prefixes (in_dt_Lockfiles, out_dt_Conflicts)
+      - R.K.06 Idempotent: same input -> same output (no external state mutated)
   -->
 
   <x:Members>
@@ -36,50 +54,253 @@
 
   <Sequence DisplayName="License drift check">
     <Sequence.Variables>
-      <Variable x:TypeArguments="s:String" Name="strApiUrl" />
-      <Variable x:TypeArguments="sd:DataTable" Name="dt_Conflicts" />
+      <Variable x:TypeArguments="s:String"        Name="strClearlyDefinedBase" />
+      <Variable x:TypeArguments="s:String"        Name="strGitHubApiBase" />
+      <Variable x:TypeArguments="ssec:SecureString" Name="secGitHubToken" />
+      <Variable x:TypeArguments="s:String"        Name="strGitHubBearer" />
+      <Variable x:TypeArguments="sd:DataTable"    Name="dt_Conflicts" />
+      <Variable x:TypeArguments="sd:DataRow"      Name="dr_Lockfile" />
+      <Variable x:TypeArguments="s:String"        Name="strPkgType" />
+      <Variable x:TypeArguments="s:String"        Name="strPkgProvider" />
+      <Variable x:TypeArguments="s:String"        Name="strPkgNamespace" />
+      <Variable x:TypeArguments="s:String"        Name="strPkgName" />
+      <Variable x:TypeArguments="s:String"        Name="strPkgRevision" />
+      <Variable x:TypeArguments="s:String"        Name="strRepoOwner" />
+      <Variable x:TypeArguments="s:String"        Name="strRepoName" />
+      <Variable x:TypeArguments="s:String"        Name="strDeclaredLicense" />
+      <Variable x:TypeArguments="s:String"        Name="strResolvedLicense" />
+      <Variable x:TypeArguments="s:String"        Name="strClearlyDefinedUrl" />
+      <Variable x:TypeArguments="s:String"        Name="strGitHubUrl" />
+      <Variable x:TypeArguments="s:String"        Name="strHttpResponse" />
+      <Variable x:TypeArguments="x:Int32"         Name="intHttpStatus" />
     </Sequence.Variables>
 
     <ui:LogMessage DisplayName="Log start" Level="Info"
                    Message="Starting CheckLicenseDrift" />
 
-    <!-- Read Config.xlsx::Settings::LicenseDataApi at runtime -->
-    <ui:GetAsset DisplayName="Resolve config asset"
-                 AssetName="LicenseDataApi"
-                 Result="[strApiUrl]" />
+    <!-- R.C.01: read API bases from Config.xlsx::Settings via Orchestrator Asset proxy. -->
+    <ui:GetAsset DisplayName="Resolve ClearlyDefinedApiBase"
+                 AssetName="ClearlyDefinedApiBase"
+                 Result="[strClearlyDefinedBase]" />
+    <ui:GetAsset DisplayName="Resolve GitHubApiBase"
+                 AssetName="GitHubApiBase"
+                 Result="[strGitHubApiBase]" />
 
-    <TryCatch DisplayName="Try: query license data, build conflicts">
-      <TryCatch.Try>
-        <ui:RetryScope DisplayName="Retry on transient errors"
-                       NumberOfRetries="3"
-                       RetryInterval="00:00:05">
-          <Sequence>
-            <ui:HttpClient DisplayName="GET license data"
-                           Endpoint="[strApiUrl]"
-                           Method="GET"
-                           AcceptFormat="Json"
-                           TimeoutMS="15000"
-                           Result="[Nothing]" />
-            <ui:BuildDataTable DisplayName="Initialize conflicts table"
-                               DataTable="[dt_Conflicts]" />
-          </Sequence>
-        </ui:RetryScope>
-      </TryCatch.Try>
-      <TryCatch.Catches>
-        <Catch x:TypeArguments="s:Exception">
-          <ActivityAction x:TypeArguments="s:Exception">
-            <ActivityAction.Argument>
-              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
-            </ActivityAction.Argument>
-            <Sequence>
-              <ui:LogMessage Level="Error"
-                             Message="[&quot;CheckLicenseDrift failed: &quot; + exception.Message]" />
-              <Throw Exception="[New BusinessException(&quot;LicenseDataApi unreachable&quot;, exception)]" />
-            </Sequence>
-          </ActivityAction>
-        </Catch>
-      </TryCatch.Catches>
-    </TryCatch>
+    <!-- R.X.02: GitHub credential fetched once, at the smallest scope that needs it. -->
+    <ui:GetRobotCredential DisplayName="Get GitHubToken"
+                           AssetName="GitHubToken"
+                           Password="[secGitHubToken]" />
+    <Assign DisplayName="Materialise bearer header (in-memory only)">
+      <Assign.To>
+        <OutArgument x:TypeArguments="s:String">[strGitHubBearer]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="s:String">["Bearer " + (New System.Net.NetworkCredential(String.Empty, secGitHubToken)).Password]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!-- Initialise output table once; idempotent (R.K.06). -->
+    <ui:BuildDataTable DisplayName="Initialise conflicts table"
+                       DataTable="[dt_Conflicts]">
+      <ui:BuildDataTable.DataTableBuilt>
+        <sd:DataTable TableName="Conflicts">
+          <sd:DataTable.Columns>
+            <sd:DataColumn ColumnName="Package"            DataType="System.String" />
+            <sd:DataColumn ColumnName="DeclaredLicense"    DataType="System.String" />
+            <sd:DataColumn ColumnName="TransitiveLicense"  DataType="System.String" />
+            <sd:DataColumn ColumnName="ConflictType"       DataType="System.String" />
+          </sd:DataTable.Columns>
+        </sd:DataTable>
+      </ui:BuildDataTable.DataTableBuilt>
+    </ui:BuildDataTable>
+
+    <ForEach x:TypeArguments="sd:DataRow"
+             DisplayName="For each lockfile entry"
+             Values="[in_dt_Lockfiles.Rows]">
+      <ActivityAction x:TypeArguments="sd:DataRow">
+        <ActivityAction.Argument>
+          <DelegateInArgument x:TypeArguments="sd:DataRow" Name="dr_Lockfile" />
+        </ActivityAction.Argument>
+        <Sequence DisplayName="Resolve license for one package">
+          <Assign DisplayName="Read coordinates from row">
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strPkgType]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[dr_Lockfile("Type").ToString()]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strPkgProvider]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[dr_Lockfile("Provider").ToString()]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strPkgNamespace]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[If(dr_Lockfile("Namespace") Is DBNull.Value, "-", dr_Lockfile("Namespace").ToString())]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strPkgName]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[dr_Lockfile("Name").ToString()]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strPkgRevision]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[dr_Lockfile("Revision").ToString()]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strRepoOwner]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[If(dr_Lockfile("Owner") Is DBNull.Value, String.Empty, dr_Lockfile("Owner").ToString())]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strRepoName]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[If(dr_Lockfile("Repo") Is DBNull.Value, String.Empty, dr_Lockfile("Repo").ToString())]</InArgument></Assign.Value>
+          </Assign>
+          <Assign>
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strDeclaredLicense]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[If(dr_Lockfile("DeclaredLicense") Is DBNull.Value, String.Empty, dr_Lockfile("DeclaredLicense").ToString())]</InArgument></Assign.Value>
+          </Assign>
+          <Assign DisplayName="Reset resolved license per row">
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strResolvedLicense]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[String.Empty]</InArgument></Assign.Value>
+          </Assign>
+          <Assign DisplayName="Compose ClearlyDefined URL (Config-driven base)">
+            <Assign.To><OutArgument x:TypeArguments="s:String">[strClearlyDefinedUrl]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="s:String">[strClearlyDefinedBase + "/definitions/" + strPkgType + "/" + strPkgProvider + "/" + strPkgNamespace + "/" + strPkgName + "/" + strPkgRevision]</InArgument></Assign.Value>
+          </Assign>
+
+          <!-- PRIMARY: ClearlyDefined.io. R.E.01 Try/Catch + R.E.02 RetryScope. -->
+          <TryCatch DisplayName="Try: ClearlyDefined.io primary lookup">
+            <TryCatch.Try>
+              <ui:RetryScope DisplayName="RetryScope - ClearlyDefined"
+                             NumberOfRetries="3"
+                             RetryInterval="00:00:05">
+                <Sequence>
+                  <ui:HttpClient DisplayName="GET ClearlyDefined definition"
+                                 Endpoint="[strClearlyDefinedUrl]"
+                                 Method="GET"
+                                 AcceptFormat="Json"
+                                 TimeoutMS="15000"
+                                 ContinueOnError="False"
+                                 Result="[strHttpResponse]"
+                                 StatusCode="[intHttpStatus]" />
+                  <!-- R.E.03: 4xx auth/client errors do not retry; raise BusinessException so the outer Catch handles it. -->
+                  <If Condition="[intHttpStatus &gt;= 400 AndAlso intHttpStatus &lt; 500]"
+                      DisplayName="Bail on 4xx (no retry)">
+                    <If.Then>
+                      <Throw Exception="[New BusinessException(&quot;ClearlyDefined 4xx (&quot; + intHttpStatus.ToString() + &quot;) - skipping retry, will fall back&quot;)]" />
+                    </If.Then>
+                  </If>
+                  <ui:DeserializeJson DisplayName="Parse ClearlyDefined response"
+                                      JsonString="[strHttpResponse]"
+                                      JsonObject="[Nothing]" />
+                  <Assign DisplayName="Extract licensed.declared (SPDX)">
+                    <Assign.To><OutArgument x:TypeArguments="s:String">[strResolvedLicense]</OutArgument></Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="s:String">[Newtonsoft.Json.Linq.JObject.Parse(strHttpResponse).SelectToken("licensed.declared")?.ToString()]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </Sequence>
+              </ui:RetryScope>
+            </TryCatch.Try>
+            <TryCatch.Catches>
+              <Catch x:TypeArguments="s:Exception">
+                <ActivityAction x:TypeArguments="s:Exception">
+                  <ActivityAction.Argument>
+                    <DelegateInArgument x:TypeArguments="s:Exception" Name="exClearlyDefined" />
+                  </ActivityAction.Argument>
+                  <Sequence>
+                    <ui:LogMessage Level="Warn"
+                                   Message="[&quot;ClearlyDefined lookup failed for &quot; + strPkgName + &quot;: &quot; + exClearlyDefined.Message + &quot; - falling back to GitHub Licenses&quot;]" />
+                    <Assign>
+                      <Assign.To><OutArgument x:TypeArguments="s:String">[strResolvedLicense]</OutArgument></Assign.To>
+                      <Assign.Value><InArgument x:TypeArguments="s:String">[String.Empty]</InArgument></Assign.Value>
+                    </Assign>
+                  </Sequence>
+                </ActivityAction>
+              </Catch>
+            </TryCatch.Catches>
+          </TryCatch>
+
+          <!-- FALLBACK: GitHub Licenses API, only when ClearlyDefined returned no SPDX data. -->
+          <If Condition="[String.IsNullOrEmpty(strResolvedLicense) AndAlso Not String.IsNullOrEmpty(strRepoOwner) AndAlso Not String.IsNullOrEmpty(strRepoName)]"
+              DisplayName="Fallback when no SPDX from ClearlyDefined">
+            <If.Then>
+              <Sequence>
+                <Assign DisplayName="Compose GitHub Licenses URL (Config-driven base)">
+                  <Assign.To><OutArgument x:TypeArguments="s:String">[strGitHubUrl]</OutArgument></Assign.To>
+                  <Assign.Value><InArgument x:TypeArguments="s:String">[strGitHubApiBase + "/repos/" + strRepoOwner + "/" + strRepoName + "/license"]</InArgument></Assign.Value>
+                </Assign>
+                <TryCatch DisplayName="Try: GitHub Licenses fallback">
+                  <TryCatch.Try>
+                    <ui:RetryScope DisplayName="RetryScope - GitHub Licenses"
+                                   NumberOfRetries="3"
+                                   RetryInterval="00:00:05">
+                      <Sequence>
+                        <ui:HttpClient DisplayName="GET GitHub repo license"
+                                       Endpoint="[strGitHubUrl]"
+                                       Method="GET"
+                                       AcceptFormat="Json"
+                                       TimeoutMS="15000"
+                                       ContinueOnError="False"
+                                       Result="[strHttpResponse]"
+                                       StatusCode="[intHttpStatus]">
+                          <ui:HttpClient.Headers>
+                            <scg:Dictionary x:TypeArguments="s:String, s:String">
+                              <x:String x:Key="Authorization">[strGitHubBearer]</x:String>
+                              <x:String x:Key="Accept">application/vnd.github+json</x:String>
+                              <x:String x:Key="X-GitHub-Api-Version">2022-11-28</x:String>
+                              <x:String x:Key="User-Agent">aurora-license-drift</x:String>
+                            </scg:Dictionary>
+                          </ui:HttpClient.Headers>
+                        </ui:HttpClient>
+                        <!-- R.E.03: surface 401/403 immediately - do not retry on auth failures. -->
+                        <If Condition="[intHttpStatus = 401 OrElse intHttpStatus = 403]"
+                            DisplayName="Bail on auth 4xx (no retry)">
+                          <If.Then>
+                            <Throw Exception="[New BusinessException(&quot;GitHub Licenses auth failure (&quot; + intHttpStatus.ToString() + &quot;) - GitHubToken invalid or insufficient scope&quot;)]" />
+                          </If.Then>
+                        </If>
+                        <If Condition="[intHttpStatus &gt;= 400 AndAlso intHttpStatus &lt; 500]"
+                            DisplayName="Bail on other 4xx (no retry)">
+                          <If.Then>
+                            <Throw Exception="[New BusinessException(&quot;GitHub Licenses 4xx (&quot; + intHttpStatus.ToString() + &quot;) - skipping retry&quot;)]" />
+                          </If.Then>
+                        </If>
+                        <Assign DisplayName="Extract license.spdx_id">
+                          <Assign.To><OutArgument x:TypeArguments="s:String">[strResolvedLicense]</OutArgument></Assign.To>
+                          <Assign.Value>
+                            <InArgument x:TypeArguments="s:String">[Newtonsoft.Json.Linq.JObject.Parse(strHttpResponse).SelectToken("license.spdx_id")?.ToString()]</InArgument>
+                          </Assign.Value>
+                        </Assign>
+                      </Sequence>
+                    </ui:RetryScope>
+                  </TryCatch.Try>
+                  <TryCatch.Catches>
+                    <Catch x:TypeArguments="s:Exception">
+                      <ActivityAction x:TypeArguments="s:Exception">
+                        <ActivityAction.Argument>
+                          <DelegateInArgument x:TypeArguments="s:Exception" Name="exGitHub" />
+                        </ActivityAction.Argument>
+                        <Sequence>
+                          <ui:LogMessage Level="Error"
+                                         Message="[&quot;GitHub Licenses fallback failed for &quot; + strRepoOwner + &quot;/&quot; + strRepoName + &quot;: &quot; + exGitHub.Message]" />
+                          <Throw Exception="[New BusinessException(&quot;License lookup failed for &quot; + strPkgName + &quot;: both ClearlyDefined and GitHub Licenses unreachable&quot;, exGitHub)]" />
+                        </Sequence>
+                      </ActivityAction>
+                    </Catch>
+                  </TryCatch.Catches>
+                </TryCatch>
+              </Sequence>
+            </If.Then>
+          </If>
+
+          <!-- Conflict detection: declared vs. resolved transitive. -->
+          <If Condition="[Not String.IsNullOrEmpty(strDeclaredLicense) AndAlso Not String.IsNullOrEmpty(strResolvedLicense) AndAlso Not String.Equals(strDeclaredLicense, strResolvedLicense, StringComparison.OrdinalIgnoreCase)]"
+              DisplayName="Record conflict if declared != resolved">
+            <If.Then>
+              <ui:AddDataRow DisplayName="Append conflict row"
+                             DataTable="[dt_Conflicts]"
+                             ArrayRow="[New Object() { strPkgName, strDeclaredLicense, strResolvedLicense, &quot;SPDX_MISMATCH&quot; }]" />
+            </If.Then>
+          </If>
+        </Sequence>
+      </ActivityAction>
+    </ForEach>
 
     <Assign DisplayName="Set out arg">
       <Assign.To>
