@@ -1,0 +1,61 @@
+{
+  "$schema": "https://uipath.com/schemas/eval/v1.json",
+  "name": "maintainer-health-triage-eval",
+  "description": "Acceptance criteria for the maintainer-health agent — one eval per AC line in the PDD.",
+  "model": { "tier": "mid_stakes" },
+  "cases": [
+    {
+      "name": "AC-1: healthy-maintainer-no-flags",
+      "description": "Given a high Scorecard score and recent commits, the agent should report a high health_score and no flags.",
+      "input": {
+        "lockfiles": [{
+          "repo": "node-app",
+          "ecosystem": "npm",
+          "deps": [{ "ecosystem": "npm", "name": "lodash/lodash", "version": "4.17.21", "depth": 1 }]
+        }]
+      },
+      "evaluators": [
+        { "type": "json_similarity", "field": "$.packages[0].ecosystem", "expected": "npm", "threshold": 1.0 },
+        { "type": "json_similarity", "field": "$.packages[0].name", "expected": "lodash/lodash", "threshold": 1.0 },
+        { "type": "json_similarity", "field": "$.flagged_count", "expected": 0, "threshold": 1.0 },
+        { "type": "llm_judge",
+          "criterion": "The package's health_score is >= 6.0 and the flags array is empty for an actively-maintained, high-Scorecard project.",
+          "threshold": 0.7 }
+      ]
+    },
+    {
+      "name": "AC-2: stale-maintainer-flagged",
+      "description": "Given a low Scorecard score and no commits in 18+ months, health_score is low and flags include 'stale'.",
+      "input": {
+        "lockfiles": [{
+          "repo": "py-app",
+          "ecosystem": "pypi",
+          "deps": [{ "ecosystem": "pypi", "name": "abandoned-pkg/legacy", "version": "0.1.0", "depth": 1 }]
+        }]
+      },
+      "evaluators": [
+        { "type": "json_similarity", "field": "$.flagged_count", "expected": 1, "threshold": 1.0 },
+        { "type": "llm_judge",
+          "criterion": "The package's flags array contains the string 'stale'. The health_score is <= 4.0 because the project hasn't shipped in 18+ months.",
+          "threshold": 0.7 }
+      ]
+    },
+    {
+      "name": "AC-3: no-scorecard-data-flagged",
+      "description": "When OpenSSF Scorecard has no data for the repo, scorecard_score is null and flags include 'no-scorecard'.",
+      "input": {
+        "lockfiles": [{
+          "repo": "obscure-app",
+          "ecosystem": "npm",
+          "deps": [{ "ecosystem": "npm", "name": "private-corp/internal-tool", "version": "0.0.1", "depth": 1 }]
+        }]
+      },
+      "evaluators": [
+        { "type": "exact_match", "field": "$.packages[0].scorecard_score", "expected": null },
+        { "type": "llm_judge",
+          "criterion": "The package's flags array contains 'no-scorecard'. The health_score sits in the neutral middle of the 0-10 range (between 3.5 and 6.5) because we lack signal rather than having bad signal.",
+          "threshold": 0.7 }
+      ]
+    }
+  ]
+}
