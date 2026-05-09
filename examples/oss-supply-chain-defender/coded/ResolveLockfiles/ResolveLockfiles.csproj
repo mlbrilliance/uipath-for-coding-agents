@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AURORA — Supply-Chain Defender
+    ResolveLockfiles Coded Workflow.
+
+    Maestro entry: GitHub.ResolveLockfiles (see examples/.../bindings.json).
+    Contract: enumerate repos under ${GITHUB_ORG} matching ScanScope, fetch
+    npm / yarn / PyPI / Go lockfiles, parse to LockfileEntry[].
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>AuroraSupplyChainDefender.GitHub</RootNamespace>
+    <AssemblyName>AuroraSupplyChainDefender.ResolveLockfiles</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- GitHub API client. Used by Resolve.cs to enumerate repos and fetch
+         tree contents. The IGitHubClient interface is mocked in unit tests. -->
+    <PackageReference Include="Octokit" Version="13.0.0" />
+
+    <!-- UiPath Coded Workflow surface (provides [Workflow] attribute,
+         logger injection, etc.) -->
+    <PackageReference Include="UiPath.CodedWorkflows" Version="24.10.2" />
+
+    <!-- System.Text.Json is in-box for net8.0 but pinned for clarity. -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>
