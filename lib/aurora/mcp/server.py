@@ -204,11 +204,19 @@ async def _dispatch(name: str, args: dict) -> Any:
         return result.model_dump()
 
     if name == "aurora_compost_dry_run":
+        from datetime import datetime, timezone
+        from pathlib import Path as _Path
+        import os as _os
+
+        from aurora.compost import propose_skill_pr
+
+        home = _Path(_os.environ.get("AURORA_HOME", "/opt/aurora"))
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        learnings_path = home / "learnings" / f"{date}.jsonl"
+        results = propose_skill_pr(learnings_path, dry_run=True)
         return {
-            "stub": True,
             "since_days": args.get("since_days", 1),
-            "candidates": [],
-            "note": "compost implementation lands in v0.2",
+            "candidates": [r.model_dump() for r in results],
         }
 
     if name == "aurora_policy_dry_run":
