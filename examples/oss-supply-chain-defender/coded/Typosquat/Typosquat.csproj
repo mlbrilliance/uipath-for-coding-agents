@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>AuroraSupplyChainDefender.Typosquat</RootNamespace>
+    <AssemblyName>AuroraSupplyChainDefender.Typosquat</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <PackageId>AuroraSupplyChainDefender.Typosquat</PackageId>
+    <Version>0.1.0</Version>
+    <Description>TyposquatCheck Coded Workflow for the AURORA Open-Source Supply-Chain Defender demo. Detects npm/PyPI typosquats via Levenshtein distance against an allow-list.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UiPath.CodedWorkflows" Version="24.10.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="AllowList.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+      <PackagePath>content\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
