@@ -1,0 +1,9 @@
+# Production deps for the supply-chain demo
+requests==2.31.0
+flask>=2.2,<3.0
+django==4.2.7  # comment after a pin
+pyyaml ; python_version >= "3.7"
+
+# A blank line above and a transitive include below.
+-r dev-requirements.txt
+numpy
