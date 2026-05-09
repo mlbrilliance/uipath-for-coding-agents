@@ -41,7 +41,7 @@ namespace AuroraSupplyChainDefender.GitHub;
 /// <c>GITHUB_TOKEN</c> credential is never logged (R.X.03).
 /// </para>
 /// </remarks>
-public class Open : CodedWorkflowBase
+public class OpenPatchPR : CodedWorkflowBase
 {
     /// <summary>Maximum retry attempts on transient (5xx / network) faults.</summary>
     public const int MaxRetryAttempts = 3;
@@ -71,7 +71,7 @@ public class Open : CodedWorkflowBase
     /// the workflow runs; the credential is never read until
     /// <see cref="Execute"/> is invoked.
     /// </summary>
-    public Open()
+    public OpenPatchPR()
     {
     }
 
@@ -80,7 +80,7 @@ public class Open : CodedWorkflowBase
     /// <see cref="IGitHubClient"/> and a fixed owner/repo pair, bypassing the
     /// environment-variable lookup.
     /// </summary>
-    public Open(IGitHubClient client, string owner, string repo)
+    public OpenPatchPR(IGitHubClient client, string owner, string repo)
     {
         _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
         _ownerOverride = owner ?? throw new ArgumentNullException(nameof(owner));

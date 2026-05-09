@@ -30,7 +30,7 @@ namespace AuroraSupplyChainDefender.GitHub;
 /// one is open, so a Maestro retry never fans out duplicate PRs.
 /// </para>
 /// </remarks>
-public class Open : CodedWorkflowBase
+public class OpenAutoPR : CodedWorkflowBase
 {
     private const string AutoPrLabel = "aurora-auto-pr";
     private const string HighSeverityLabel = "high-severity";
@@ -44,7 +44,7 @@ public class Open : CodedWorkflowBase
     /// from <c>GITHUB_TOKEN</c> at execution time per R.X (token from env,
     /// never hard-coded).
     /// </summary>
-    public Open()
+    public OpenAutoPR()
     {
     }
 
@@ -54,7 +54,7 @@ public class Open : CodedWorkflowBase
     /// touching network or environment.
     /// </summary>
     /// <param name="client">A configured GitHub client to use in place of the production-wired one.</param>
-    public Open(IGitHubClient client)
+    public OpenAutoPR(IGitHubClient client)
     {
         _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
     }
