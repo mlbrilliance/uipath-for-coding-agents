@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>AuroraSupplyChainDefender.Notify</RootNamespace>
+    <AssemblyName>AuroraSupplyChainDefender.Notify</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <PackageId>AuroraSupplyChainDefender.Notify</PackageId>
+    <Version>0.1.0</Version>
+    <Description>
+      Notify Coded Workflows (SendDigest + AppendToDigest) for the AURORA
+      Open-Source Supply-Chain Defender demo. Posts structured findings to a
+      Slack channel and maintains a running weekly digest.
+    </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UiPath.CodedWorkflows" Version="24.10.2" />
+  </ItemGroup>
+
+</Project>
