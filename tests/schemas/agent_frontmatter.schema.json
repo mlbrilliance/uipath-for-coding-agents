@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aurora.local/schemas/agent_frontmatter.schema.json",
+  "title": "AURORA agent frontmatter",
+  "description": "Shape of the YAML frontmatter at the top of every agents/<name>.md file. Validates structure only; the prompt body is checked by tests/agents/test_prompt_invariants.py (T-G2).",
+  "type": "object",
+  "required": ["name", "description", "tools", "fleet", "model_tier"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Snake/kebab-case agent identifier; must match the filename without .md."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 40,
+      "description": "Plain-English summary used by the Claude Code agent picker."
+    },
+    "tools": {
+      "description": "Either a comma-separated string or an array of Claude Code tool names. Must be non-empty.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      ]
+    },
+    "fleet": {
+      "type": "string",
+      "enum": ["discovery", "build", "operate", "meta"],
+      "description": "Which AURORA fleet the agent belongs to."
+    },
+    "model_tier": {
+      "type": "string",
+      "enum": ["high_stakes", "mid_stakes", "continuous"],
+      "description": "Routing tier; maps to policy.yaml::routing.bindings."
+    },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Optional alternate names the agent answers to."
+    },
+    "model": {
+      "type": "string",
+      "description": "Optional explicit Claude model name (e.g. opus, sonnet, haiku); informational only — routing is governed by model_tier."
+    }
+  }
+}
