@@ -1,0 +1,24 @@
+{
+  "_doc": "Snapshot of the swarm at plan time. `current_worktree` populated → that agent is holding a worktree slot from the policy.yaml::worktree_pool cap. Two slots are already in use here, leaving room for the synthetic backlog without spilling into the queue.",
+  "agents": [
+    {"name": "scout", "busy": false, "current_worktree": null},
+    {"name": "curator", "busy": false, "current_worktree": null},
+    {"name": "analyst", "busy": false, "current_worktree": null},
+    {"name": "interviewer", "busy": false, "current_worktree": null},
+    {"name": "strategist", "busy": false, "current_worktree": null},
+    {"name": "architect", "busy": false, "current_worktree": null},
+    {"name": "cartographer", "busy": false, "current_worktree": null},
+    {"name": "forger-rpa", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-101/"},
+    {"name": "forger-coded", "busy": false, "current_worktree": null},
+    {"name": "forger-agent", "busy": false, "current_worktree": null},
+    {"name": "forger-maestro", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-102/"},
+    {"name": "reviewer", "busy": false, "current_worktree": null},
+    {"name": "tester", "busy": false, "current_worktree": null},
+    {"name": "sentry", "busy": true, "current_worktree": null},
+    {"name": "diagnostician", "busy": false, "current_worktree": null},
+    {"name": "surgeon", "busy": false, "current_worktree": null},
+    {"name": "auditor", "busy": false, "current_worktree": null},
+    {"name": "concierge", "busy": false, "current_worktree": null},
+    {"name": "conductor", "busy": true, "current_worktree": null}
+  ]
+}

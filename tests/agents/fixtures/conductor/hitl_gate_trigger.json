@@ -1,0 +1,13 @@
+{
+  "_doc": "A backlog candidate whose action matches a HITL gate from policy.yaml::gates. The actual gate name is bound at test time from the live policy (the test reads policy.yaml as ground truth and patches `triggers_gate` here) so a policy edit cannot silently invalidate the test.",
+  "candidates": [
+    {
+      "id": "C-GATE-001-prod-publish",
+      "kind": "deploy_request",
+      "source": "build",
+      "target_chain": ["architect", "forger-coded", "reviewer", "tester"],
+      "requires_worktree": true,
+      "triggers_gate": "<bound-at-test-time>"
+    }
+  ]
+}
