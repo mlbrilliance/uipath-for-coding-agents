@@ -1,0 +1,12 @@
+{
+  "id": "scout-malformed",
+  "source": "twitter:@noisy",
+  "ts": "not-a-timestamp",
+  "raw": "",
+  "signal": {
+    "actor": "",
+    "frequency_hint": "occasionally",
+    "pain_indicators": [],
+    "system_hints": []
+  }
+}
