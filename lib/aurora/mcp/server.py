@@ -28,6 +28,7 @@ from typing import Any
 from aurora.fingerprint import classify_event, append_resolution, list_clusters
 from aurora.policy import dry_run as policy_dry_run, load_policy
 from aurora.recall import recall as recall_fn
+from aurora import replay as replay_mod
 
 logger = logging.getLogger(__name__)
 
@@ -193,12 +194,14 @@ async def _dispatch(name: str, args: dict) -> Any:
         return {"ok": True, "cluster_id": args["cluster_id"]}
 
     if name == "aurora_replay_instance":
-        # Stub for v1 — real implementation in lib/aurora/replay.py (next batch)
-        return {
-            "stub": True,
-            "would_replay": args,
-            "note": "replay implementation lands in v0.2",
-        }
+        instance_id = args.get("instance_id")
+        if not instance_id:
+            raise ValueError("aurora_replay_instance requires `instance_id`")
+        result = replay_mod.replay_instance(
+            instance_id=instance_id,
+            sandbox_folder=args.get("sandbox_folder"),
+        )
+        return result.model_dump()
 
     if name == "aurora_compost_dry_run":
         return {
