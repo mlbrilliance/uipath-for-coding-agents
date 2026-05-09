@@ -156,7 +156,16 @@ def cmd_restart(_: argparse.Namespace) -> int:
 # ---------- compost ----------
 
 def cmd_compost(args: argparse.Namespace) -> int:
-    print(f"[aurora-compost] would run compost step (since={args.since}, dry_run={args.dry_run})")
+    from datetime import datetime, timezone
+
+    from aurora.compost import propose_skill_pr
+
+    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    learnings_path = home / "learnings" / f"{date}.jsonl"
+
+    results = propose_skill_pr(learnings_path, dry_run=bool(args.dry_run))
+    print(json.dumps([r.model_dump() for r in results], indent=2, default=str))
     return 0
 
 
