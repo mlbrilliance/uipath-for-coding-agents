@@ -1,0 +1,104 @@
+{
+  "aurora": {
+    "kind": "emergency_patch",
+    "default_timeout_hours": 4,
+    "default_on_timeout": "escalate",
+    "default_approvers_env": "AURORA_EMERGENCY_APPROVERS",
+    "priority": "High"
+  },
+  "form": {
+    "title": "AURORA: emergency patch approval",
+    "display": "form",
+    "components": [
+      {
+        "type": "htmlelement",
+        "key": "header",
+        "tag": "h3",
+        "content": "Emergency patch — {{ candidate }}"
+      },
+      {
+        "type": "panel",
+        "title": "Triage",
+        "collapsible": true,
+        "collapsed": false,
+        "components": [
+          {
+            "type": "textfield",
+            "key": "fingerprint",
+            "label": "Fingerprint",
+            "defaultValue": "{{ fingerprint }}",
+            "disabled": true
+          },
+          {
+            "type": "number",
+            "key": "cluster_size",
+            "label": "Prior occurrences in cluster",
+            "defaultValue": "{{ cluster_size }}",
+            "disabled": true
+          },
+          {
+            "type": "textarea",
+            "key": "triage_summary",
+            "label": "Hypothesis & rationale",
+            "defaultValue": "{{ triage_summary }}",
+            "rows": 6,
+            "disabled": true
+          }
+        ]
+      },
+      {
+        "type": "panel",
+        "title": "Proposed fix",
+        "components": [
+          {
+            "type": "url",
+            "key": "diff_url",
+            "label": "Pull request",
+            "defaultValue": "{{ diff_url }}",
+            "disabled": true
+          },
+          {
+            "type": "textfield",
+            "key": "files_touched",
+            "label": "Files touched",
+            "defaultValue": "{{ files_touched }}",
+            "disabled": true
+          },
+          {
+            "type": "textfield",
+            "key": "tests_status",
+            "label": "Regression tests",
+            "defaultValue": "{{ tests_status }}",
+            "disabled": true
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "key": "decision",
+        "label": "Decision",
+        "data": {
+          "values": [
+            { "label": "Approve — merge & deploy", "value": "approve" },
+            { "label": "Reject — abandon fix", "value": "reject" },
+            { "label": "Escalate — get a second pair of eyes", "value": "escalate" }
+          ]
+        },
+        "validate": { "required": true }
+      },
+      {
+        "type": "textarea",
+        "key": "notes",
+        "label": "Notes (optional)",
+        "rows": 3
+      },
+      {
+        "type": "button",
+        "key": "submit",
+        "label": "Submit decision",
+        "action": "submit",
+        "theme": "primary"
+      }
+    ]
+  }
+}

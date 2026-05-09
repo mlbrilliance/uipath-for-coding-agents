@@ -1,0 +1,21 @@
+{
+  "$schema": "https://uipath.com/schemas/maestro-test/v1.json",
+  "name": "OssSupplyChainDefender_TimerEscalation",
+  "description": "If the security lead doesn't respond to the emergency-patch approval within 4 hours, the boundary timer fires and the task escalates to the backup approver pool.",
+  "process": "OssSupplyChainDefender",
+  "scenario": "approval-timer-escalates-after-4h",
+  "input": {
+    "GitHubOrg": "aurora-demo-org",
+    "ScanScope": ["node-app"],
+    "EmergencyApprovers": ["puneetsatyawan@gmail.com"]
+  },
+  "fixture_overrides": {
+    "VulnLookup": "fixtures/vuln-lookup-critical.json",
+    "ApproveEmergencyPatch": { "auto_timeout_after_hours": 4 }
+  },
+  "assertions": [
+    "instance.tasks.ApproveEmergencyPatch.timed_out == true",
+    "instance.tasks.EscalateApproval.created == true",
+    "events.boundary_fired.count == 1"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "findings": [
+    {
+      "ecosystem": "pypi",
+      "package": "urllib3",
+      "version": "1.26.4",
+      "depth": 1,
+      "advisory_id": "CVE-2021-33503",
+      "title": "ReDoS in URL parser",
+      "cvss": 7.5,
+      "exploit_in_wild": false,
+      "fix_version": "1.26.5",
+      "source": "nvd"
+    }
+  ],
+  "max_cvss": 7.5,
+  "has_known_exploit": false,
+  "shallowest_depth": 1,
+  "total_count": 1
+}

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://uipath.com/maestro/schemas/bindings/v1.json",
+  "process": "OssSupplyChainDefender",
+  "folder": "AURORA-Demo",
+  "version": "0.1.0",
+  "description": "Maps BPMN task IDs in process.bpmn to deployed UiPath packages, agents, and Action Center forms. Read by `uipath-platform` skill at deploy time.",
+  "messageDefinitions": {
+    "github-checks-completed": {
+      "description": "Emitted by a GitHub webhook handler when CI completes on a PR opened by AURORA",
+      "correlationKey": "pr_url",
+      "source": "webhook:/github/check_run"
+    }
+  },
+  "tasks": {
+    "ResolveLockfiles": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "GitHub.ResolveLockfiles",
+      "language": "csharp",
+      "timeout_seconds": 120,
+      "retry_policy": { "max_attempts": 3, "delay_seconds": 5 }
+    },
+    "VulnLookup": {
+      "kind": "coded-agent",
+      "package": "AuroraVulnLookup",
+      "framework": "langgraph",
+      "entry": "main:main",
+      "model_binding_tier": "mid_stakes",
+      "timeout_seconds": 600
+    },
+    "MaintainerHealth": {
+      "kind": "coded-agent",
+      "package": "AuroraMaintainerHealth",
+      "framework": "openai-agents",
+      "entry": "main:main",
+      "model_binding_tier": "mid_stakes",
+      "timeout_seconds": 300
+    },
+    "TyposquatCheck": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "Typosquat.CheckLockfiles",
+      "language": "csharp",
+      "timeout_seconds": 180
+    },
+    "LicenseDrift": {
+      "kind": "rpa-package",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "License/CheckLicenseDrift",
+      "language": "xaml",
+      "timeout_seconds": 240
+    },
+    "Triage": {
+      "kind": "coded-agent",
+      "package": "AuroraVulnLookup",
+      "framework": "langgraph",
+      "entry": "main:triage",
+      "model_binding_tier": "high_stakes",
+      "timeout_seconds": 300
+    },
+    "ApproveEmergencyPatch": {
+      "kind": "action-center-form",
+      "catalog": "aurora_supply_chain_approvals",
+      "form_template": "skills/aurora-promote/templates/emergency-patch.json",
+      "approvers_env": "AURORA_EMERGENCY_APPROVERS",
+      "timeout_hours": 4,
+      "on_timeout": "escalate"
+    },
+    "EscalateApproval": {
+      "kind": "action-center-form",
+      "catalog": "aurora_supply_chain_approvals",
+      "form_template": "skills/aurora-promote/templates/emergency-patch.json",
+      "approvers_env": "AURORA_BACKUP_APPROVERS"
+    },
+    "OpenPatchPR": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "GitHub.OpenPatchPR",
+      "language": "csharp"
+    },
+    "WaitForCI": {
+      "kind": "message-receive",
+      "message": "github-checks-completed",
+      "correlation_key_var": "pr_url",
+      "timeout_seconds": 1800
+    },
+    "AutoMerge": {
+      "kind": "dmn",
+      "decision_ref": "auto-merge-policy",
+      "decision_file": "decisions/auto-merge-policy.dmn"
+    },
+    "Notify": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "Notify.SendDigest"
+    },
+    "OpenAutoPR": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "GitHub.OpenAutoPR"
+    },
+    "BatchDigest": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "Notify.AppendToDigest"
+    },
+    "LogOnly": {
+      "kind": "script",
+      "language": "javascript"
+    }
+  },
+  "decisions": {
+    "severity-matrix": "decisions/severity-matrix.dmn",
+    "auto-merge-policy": "decisions/auto-merge-policy.dmn"
+  }
+}

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AURORA — Auto-merge policy DMN
+  ================================
+  Bound by `process.bpmn::AutoMerge` business rule task.
+  Hit policy: FIRST (rules ordered top-down; first match wins).
+-->
+<definitions
+    xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    id="auto-merge-policy-definitions"
+    name="Auto-merge policy"
+    namespace="aurora.auto-merge"
+    exporter="aurora.forger-maestro"
+    exporterVersion="0.1.0">
+
+  <decision id="auto-merge-policy" name="Decide merge action">
+    <variable name="action" typeRef="string" />
+
+    <decisionTable hitPolicy="FIRST" outputLabel="Merge action">
+      <input id="severity" label="Severity">
+        <inputExpression typeRef="string"><text>severity</text></inputExpression>
+      </input>
+      <input id="ciResult" label="CI result">
+        <inputExpression typeRef="string"><text>ciResult</text></inputExpression>
+      </input>
+      <input id="filesTouched" label="Files touched">
+        <inputExpression typeRef="number"><text>filesTouched</text></inputExpression>
+      </input>
+
+      <output id="actionOut" label="Action" name="action" typeRef="string" />
+
+      <rule id="r-fail">
+        <description>CI failed — never auto-merge regardless of severity</description>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>"failure", "error"</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <outputEntry><text>"human-review"</text></outputEntry>
+      </rule>
+
+      <rule id="r-critical-hitl">
+        <description>Critical findings always go through HITL review even on green CI</description>
+        <inputEntry><text>"critical"</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <outputEntry><text>"human-review"</text></outputEntry>
+      </rule>
+
+      <rule id="r-large-hitl">
+        <description>Patches touching > 3 files always require human review</description>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>&gt; 3</text></inputEntry>
+        <outputEntry><text>"human-review"</text></outputEntry>
+      </rule>
+
+      <rule id="r-high-auto">
+        <description>High severity, green CI, ≤ 3 files → auto-merge</description>
+        <inputEntry><text>"high"</text></inputEntry>
+        <inputEntry><text>"success"</text></inputEntry>
+        <inputEntry><text>&lt;= 3</text></inputEntry>
+        <outputEntry><text>"auto-merge"</text></outputEntry>
+      </rule>
+
+      <rule id="r-medium-auto">
+        <description>Medium severity, green CI, ≤ 3 files → auto-merge</description>
+        <inputEntry><text>"medium"</text></inputEntry>
+        <inputEntry><text>"success"</text></inputEntry>
+        <inputEntry><text>&lt;= 3</text></inputEntry>
+        <outputEntry><text>"auto-merge"</text></outputEntry>
+      </rule>
+
+      <rule id="r-default">
+        <description>Default: review</description>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <inputEntry><text>-</text></inputEntry>
+        <outputEntry><text>"human-review"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

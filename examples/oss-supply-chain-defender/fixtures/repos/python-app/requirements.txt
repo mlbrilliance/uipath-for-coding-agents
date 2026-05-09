@@ -1,0 +1,9 @@
+# AURORA demo fixture — Python app with deliberately vulnerable dependencies.
+# DO NOT USE IN PRODUCTION.
+
+pyyaml==5.3.1
+requests==2.25.0
+urllib3==1.26.4
+jinja2==2.11.2
+cryptography==3.2
+pillow==8.0.0

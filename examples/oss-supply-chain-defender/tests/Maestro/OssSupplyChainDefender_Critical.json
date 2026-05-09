@@ -1,0 +1,32 @@
+{
+  "$schema": "https://uipath.com/schemas/maestro-test/v1.json",
+  "name": "OssSupplyChainDefender_Critical",
+  "description": "End-to-end test: a critical finding flows through the Critical sub-process, fires the Action Center gate, and on approval opens an auto-PR. AC-2 from the PDD.",
+  "process": "OssSupplyChainDefender",
+  "scenario": "critical-finding-flows-through-action-center",
+  "input": {
+    "GitHubOrg": "aurora-demo-org",
+    "ScanScope": ["node-app"],
+    "EmergencyApprovers": ["puneetsatyawan@gmail.com"]
+  },
+  "fixture_overrides": {
+    "ResolveLockfiles": "fixtures/resolve-lockfiles-node.json",
+    "VulnLookup":       "fixtures/vuln-lookup-critical.json",
+    "MaintainerHealth": "fixtures/maintainer-health-ok.json",
+    "TyposquatCheck":   "fixtures/typosquat-clean.json",
+    "LicenseDrift":     "fixtures/license-drift-clean.json",
+    "WaitForCI":        { "auto_resolve_with": { "ci_result": "success" } }
+  },
+  "approver_responses": {
+    "ApproveEmergencyPatch": { "decision": "approve", "notes": "test-approve" }
+  },
+  "assertions": [
+    "instance.path includes 'CriticalSubProcess'",
+    "instance.tasks.ApproveEmergencyPatch.created == true",
+    "instance.tasks.ApproveEmergencyPatch.timeout_hours == 4",
+    "instance.tasks.OpenPatchPR.completed == true",
+    "instance.tasks.AutoMerge.output.action == 'human-review'",
+    "instance.endEvent == 'End_RunComplete'",
+    "instance.duration_seconds < 600"
+  ]
+}

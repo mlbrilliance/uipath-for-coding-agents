@@ -1,0 +1,138 @@
+# AURORA operating policy. Read on boot by the Conductor.
+# Schema: ./policy.schema.json (Batch 2)
+
+version: 1
+
+# The org/tenant AURORA serves
+identity:
+  uipath_folder: AURORA-Demo
+  action_catalog: aurora_supply_chain_approvals
+  github_org: aurora-demo-org
+
+# OAuth scope list AURORA requests at runtime token mint
+uipath_scopes:
+  - OR.Folders
+  - OR.Execution
+  - OR.Jobs
+  - OR.Tasks
+  - OR.Queues
+  - OR.Assets
+  - OR.Robots
+  - OR.Machines
+  - OR.Monitoring
+  - OR.Settings
+  - OR.Audit
+  - OR.Administration
+  - OR.Users
+  - OR.Webhooks
+  - OR.License
+
+# Discovery fleet — what to listen to
+discovery:
+  sources:
+    - kind: slack_jsonl_fixture
+      path: ./examples/oss-supply-chain-defender/fixtures/slack-channel.jsonl
+    # - kind: slack
+    #   channel: ${SLACK_CHANNEL_ID}
+    # - kind: jira
+    #   project: COE
+  min_score_for_build: 70
+  scoring:
+    weights:
+      frequency: 0.4
+      pain: 0.4
+      feasibility: 0.2
+
+# Build fleet — pattern selection rules (architect uses these)
+build:
+  prefer_pattern_when:
+    - if: actor_count >= 2
+      pick: maestro
+    - if: actor_count == 1 && transactional
+      pick: reframework_performer
+    - if: actor_count == 1 && stateless
+      pick: sequence
+  test_coverage_floor: 0.8
+  worktree_root: ${AURORA_WORKTREE_DIR}
+
+# Deploy — auto vs HITL
+deploy:
+  dev:  { auto: true }
+  test: { auto: true }
+  prod: { auto: false, gate: hitl_action_center }
+
+# Operate fleet
+operate:
+  sentry:
+    poll_interval_seconds: ${AURORA_SENTRY_INTERVAL}
+    use_webhooks_when_available: true
+  surgeon:
+    max_auto_fixes_per_day: ${AURORA_MAX_AUTO_FIXES_PER_DAY}
+    max_workflows_touched_without_hitl: 3
+
+# Cross-cutting HITL gates — never bypass
+gates:
+  - name: prod_publish
+    trigger: "publish to folder matching ^Production"
+    via: action_center
+    catalog: aurora_supply_chain_approvals
+    timeout_hours: 8
+
+  - name: emergency_patch
+    trigger: "severity == critical"
+    via: action_center
+    catalog: aurora_supply_chain_approvals
+    approvers_env: AURORA_EMERGENCY_APPROVERS
+    timeout_hours: 4
+    on_timeout: escalate
+
+  - name: deprecation
+    trigger: "deprecate process"
+    via: action_center
+    require: cross_folder_dependency_check_clean
+
+  - name: large_fix
+    trigger: "auto-fix touches >3 workflows"
+    via: action_center
+
+  - name: skill_compost_pr
+    trigger: "skill update from compost"
+    via: github_pr_review
+    auto_merge: false
+
+# Memory backends
+memory:
+  root: ${AURORA_MEMORY_DIR}
+  fingerprint_index: sqlite
+
+# Multi-tier model routing — Claude tiers, no other providers in v1
+routing:
+  defaults:
+    high_stakes: ${AURORA_MODEL_ARCHITECT}     # opus
+    mid_stakes:  ${AURORA_MODEL_FORGER}        # sonnet
+    continuous:  ${AURORA_MODEL_SENTRY}        # haiku
+  bindings:
+    architect:       high_stakes
+    diagnostician:   high_stakes
+    strategist:      high_stakes
+    conductor:       high_stakes
+    forger-rpa:      mid_stakes
+    forger-coded:    mid_stakes
+    forger-agent:    mid_stakes
+    forger-maestro:  mid_stakes
+    cartographer:    mid_stakes
+    reviewer:        mid_stakes
+    tester:          mid_stakes
+    interviewer:     mid_stakes
+    analyst:         mid_stakes
+    auditor:         mid_stakes
+    surgeon:         mid_stakes
+    sentry:          continuous
+    curator:         continuous
+    scout:           continuous
+    concierge:       continuous
+
+# Cost guardrails
+budget:
+  daily_usd: ${AURORA_DAILY_BUDGET_USD}
+  on_exceed: pause_non_critical_fleets

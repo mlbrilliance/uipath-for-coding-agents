@@ -1,0 +1,20 @@
+{
+  "$schema": "https://uipath.com/schemas/maestro-test/v1.json",
+  "name": "OssSupplyChainDefender_HighAutoMerges",
+  "description": "High severity, green CI, ≤ 3 files touched → DMN auto-merge-policy returns 'auto-merge'. AC-5 from the PDD.",
+  "process": "OssSupplyChainDefender",
+  "scenario": "high-finding-auto-merges-when-green",
+  "input": {
+    "GitHubOrg": "aurora-demo-org",
+    "ScanScope": ["python-app"]
+  },
+  "fixture_overrides": {
+    "VulnLookup":   "fixtures/vuln-lookup-high.json",
+    "WaitForCI":    { "auto_resolve_with": { "ci_result": "success" } }
+  },
+  "assertions": [
+    "instance.path includes 'OpenAutoPR'",
+    "instance.path NOT includes 'CriticalSubProcess'",
+    "instance.endEvent == 'End_RunComplete'"
+  ]
+}

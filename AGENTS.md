@@ -1,0 +1,1 @@
+See [CLAUDE.md](./CLAUDE.md) for the project context. This file is a stand-in for harnesses that look for `AGENTS.md`.

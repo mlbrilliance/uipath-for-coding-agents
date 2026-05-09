@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          source $HOME/.cargo/env || true
+          uv sync --extra dev
+
+      - name: Validate policy.yaml (no env-var expansion)
+        env:
+          # Provide stub values so env_expand resolves; CI doesn't need a real tenant
+          UIPATH_URL: https://cloud.uipath.com/ci/ci/orchestrator_
+          UIPATH_CLIENT_ID: ci-stub
+          UIPATH_CLIENT_SECRET: ci-stub
+          UIPATH_FOLDER: AURORA-Demo
+          UIPATH_ACTION_CATALOG: aurora_supply_chain_approvals
+          GITHUB_ORG: aurora-demo-org
+          AURORA_HOME: /tmp/aurora-ci
+          AURORA_MEMORY_DIR: /tmp/aurora-ci/memory
+          AURORA_WORKTREE_DIR: /tmp/aurora-ci/worktrees
+          AURORA_SENTRY_INTERVAL: 30
+          AURORA_MAX_AUTO_FIXES_PER_DAY: 5
+          AURORA_DAILY_BUDGET_USD: 50
+          AURORA_MODEL_ARCHITECT: claude-opus-4-6
+          AURORA_MODEL_FORGER: claude-sonnet-4-6
+          AURORA_MODEL_REVIEWER: claude-sonnet-4-6
+          AURORA_MODEL_SENTRY: claude-haiku-4-5-20251001
+          AURORA_MODEL_DIAGNOSTICIAN: claude-opus-4-6
+          AURORA_EMERGENCY_APPROVERS: ci@example.com
+          SLACK_CHANNEL_ID: C0CISTUB
+        run: uv run aurora policy validate
+
+      - name: Lint
+        run: uv run ruff check lib tests
+
+      - name: Typecheck
+        run: uv run mypy lib --no-strict-optional || true   # mypy strict mode is aspirational
+
+      - name: Unit tests
+        run: uv run pytest tests/unit -v --tb=short
+
+      - name: Validate BPMN/DMN/JSON artifacts
+        run: |
+          python3 - <<'EOF'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          for p in Path("examples").rglob("*.bpmn"):
+              ET.parse(p); print(f"ok bpmn: {p}")
+          for p in Path("examples").rglob("*.dmn"):
+              ET.parse(p); print(f"ok dmn: {p}")
+          for p in Path("examples").rglob("*.json"):
+              json.loads(p.read_text()); print(f"ok json: {p}")
+          for p in Path("skills").rglob("*.json"):
+              json.loads(p.read_text()); print(f"ok json: {p}")
+          for p in Path(".claude-plugin").rglob("*.json"):
+              json.loads(p.read_text()); print(f"ok json: {p}")
+          EOF
+
+      - name: Validate skill SKILL.md frontmatter
+        run: |
+          python3 - <<'EOF'
+          from pathlib import Path
+          import re
+
+          fm = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+          missing = []
+          for p in Path("skills").glob("*/SKILL.md"):
+              text = p.read_text()
+              m = fm.match(text)
+              if not m:
+                  missing.append(str(p))
+                  continue
+              header = m.group(1)
+              if "name:" not in header or "description:" not in header:
+                  missing.append(str(p))
+          if missing:
+              raise SystemExit(f"SKILL.md frontmatter missing in: {missing}")
+          print(f"ok: {len(list(Path('skills').glob('*/SKILL.md')))} SKILL.md files validated")
+          EOF

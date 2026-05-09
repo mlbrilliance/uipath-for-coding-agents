@@ -1,0 +1,21 @@
+{
+  "$schema": "https://uipath.com/schemas/agents/v1.json",
+  "name": "AuroraVulnLookup",
+  "description": "Cross-references lockfile deps against NVD/OSV/GitHub Advisory; emits structured Findings.",
+  "version": "0.1.0",
+  "framework": "langgraph",
+  "functions": {
+    "main": "main.py:main",
+    "triage": "main.py:triage"
+  },
+  "model": {
+    "tier": "mid_stakes"
+  },
+  "credentials": [
+    { "name": "GitHubToken", "scope": "asset" },
+    { "name": "NvdApiKey",   "scope": "asset", "optional": true }
+  ],
+  "tracing": {
+    "enabled": true
+  }
+}

@@ -1,0 +1,96 @@
+<Activity mc:Ignorable="sap sap2010 sads"
+    x:Class="License.CheckLicenseDrift"
+    sap2010:WorkflowViewState.IdRef="License.CheckLicenseDrift_1"
+    xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
+    xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+    xmlns:sads="http://schemas.microsoft.com/netfx/2010/xaml/activities/debugger"
+    xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib"
+    xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib"
+    xmlns:ui="http://schemas.uipath.com/workflow/activities"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    AURORA — License drift checker (XAML, fixture).
+
+    Compares declared license metadata against the licenses pulled in
+    transitively for each lockfile. Emits `conflicts` (DataTable) for the
+    Maestro process to consume.
+
+    Discipline:
+      - Try/Catch wraps the external HTTP call
+      - RetryScope wraps the API request
+      - Config-driven URL (Config.xlsx::Settings::LicenseDataApi)
+      - Logging bookends
+      - Strict naming: in_/out_/io_ args; PascalCase variables
+
+    NOTE: this is a minimal, educational stub. A real implementation
+    consults a license-data API and runs SPDX compatibility analysis.
+  -->
+
+  <x:Members>
+    <x:Property Name="in_dt_Lockfiles"  Type="InArgument(sd:DataTable)" />
+    <x:Property Name="out_dt_Conflicts" Type="OutArgument(sd:DataTable)" />
+  </x:Members>
+
+  <Sequence DisplayName="License drift check">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="s:String" Name="strApiUrl" />
+      <Variable x:TypeArguments="sd:DataTable" Name="dt_Conflicts" />
+    </Sequence.Variables>
+
+    <ui:LogMessage DisplayName="Log start" Level="Info"
+                   Message="Starting CheckLicenseDrift" />
+
+    <!-- Read Config.xlsx::Settings::LicenseDataApi at runtime -->
+    <ui:GetAsset DisplayName="Resolve config asset"
+                 AssetName="LicenseDataApi"
+                 Result="[strApiUrl]" />
+
+    <TryCatch DisplayName="Try: query license data, build conflicts">
+      <TryCatch.Try>
+        <ui:RetryScope DisplayName="Retry on transient errors"
+                       NumberOfRetries="3"
+                       RetryInterval="00:00:05">
+          <Sequence>
+            <ui:HttpClient DisplayName="GET license data"
+                           Endpoint="[strApiUrl]"
+                           Method="GET"
+                           AcceptFormat="Json"
+                           TimeoutMS="15000"
+                           Result="[Nothing]" />
+            <ui:BuildDataTable DisplayName="Initialize conflicts table"
+                               DataTable="[dt_Conflicts]" />
+          </Sequence>
+        </ui:RetryScope>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="s:Exception">
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+            </ActivityAction.Argument>
+            <Sequence>
+              <ui:LogMessage Level="Error"
+                             Message="[&quot;CheckLicenseDrift failed: &quot; + exception.Message]" />
+              <Throw Exception="[New BusinessException(&quot;LicenseDataApi unreachable&quot;, exception)]" />
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+
+    <Assign DisplayName="Set out arg">
+      <Assign.To>
+        <OutArgument x:TypeArguments="sd:DataTable">[out_dt_Conflicts]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="sd:DataTable">[dt_Conflicts]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <ui:LogMessage DisplayName="Log complete" Level="Info"
+                   Message="Completed CheckLicenseDrift" />
+  </Sequence>
+</Activity>

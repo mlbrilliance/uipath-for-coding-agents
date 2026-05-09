@@ -1,0 +1,10 @@
+{"ts":"2026-04-28T09:14:23Z","author":"alex.r","channel":"#engineering","raw":"thanks for fixing the build pipeline yesterday — that flaky test is finally green"}
+{"ts":"2026-04-28T11:02:11Z","author":"sam.k","channel":"#rpa-asks","raw":"folks, every Monday morning I spend two hours pulling the open vulnerability list across our public-facing repos. our CISO keeps asking and I'm doing this by hand. anyone got a script?"}
+{"ts":"2026-04-29T10:31:45Z","author":"sam.k","channel":"#rpa-asks","raw":"this is the second week in a row I'm doing the vuln scan manually. an automation would save me a half day and stop me from missing things. anyone?"}
+{"ts":"2026-04-30T16:48:02Z","author":"morgan.l","channel":"#security","raw":"FYI we just had a near-miss with a typosquatted package on a side-project repo. someone almost merged a PR adding `lodahs` instead of `lodash`. we need a guardrail."}
+{"ts":"2026-05-02T08:55:30Z","author":"jordan.t","channel":"#engineering","raw":"why does our CI take so long?"}
+{"ts":"2026-05-05T14:22:18Z","author":"sam.k","channel":"#rpa-asks","raw":"third Monday in a row. starting to lose my mind on the weekly vuln triage. cisco wants daily reports now. anyone?"}
+{"ts":"2026-05-06T09:11:54Z","author":"morgan.l","channel":"#security","raw":"reminder: log4shell 2.0 was 4 years ago. we still don't have automated supply chain scanning across the org. that's bad."}
+{"ts":"2026-05-08T13:45:09Z","author":"sam.k","channel":"#rpa-asks","raw":"i'd like to defend our public-facing GitHub org from the next supply-chain attack. need automated scanning of lockfiles against NVD/OSV/scorecard, with auto-PRs for non-critical fixes and security-lead approval for the scary ones. is anyone working on this?"}
+{"ts":"2026-05-08T13:51:33Z","author":"jordan.t","channel":"#engineering","raw":"+1, would also use this on our backend repos"}
+{"ts":"2026-05-09T07:23:01Z","author":"alex.r","channel":"#engineering","raw":"morning standup at 9, see you all then"}

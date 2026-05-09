@@ -1,0 +1,55 @@
+{
+  "aurora": {
+    "kind": "prod_publish",
+    "default_timeout_hours": 8,
+    "default_on_timeout": "deny",
+    "default_approvers_env": "AURORA_EMERGENCY_APPROVERS",
+    "priority": "Medium"
+  },
+  "form": {
+    "title": "AURORA: production publish approval",
+    "display": "form",
+    "components": [
+      {
+        "type": "htmlelement",
+        "key": "header",
+        "tag": "h3",
+        "content": "Promote to production — {{ package_name }} @ {{ package_version }}"
+      },
+      {
+        "type": "panel",
+        "title": "Package",
+        "components": [
+          { "type": "textfield", "key": "package_name", "label": "Package", "defaultValue": "{{ package_name }}", "disabled": true },
+          { "type": "textfield", "key": "package_version", "label": "Version", "defaultValue": "{{ package_version }}", "disabled": true },
+          { "type": "textfield", "key": "folder", "label": "Target folder", "defaultValue": "{{ folder }}", "disabled": true },
+          { "type": "url", "key": "diff_url", "label": "Source diff (test → prod)", "defaultValue": "{{ diff_url }}", "disabled": true }
+        ]
+      },
+      {
+        "type": "panel",
+        "title": "Pre-promote audit",
+        "components": [
+          { "type": "textfield", "key": "reviewer_status", "label": "Reviewer", "defaultValue": "{{ reviewer_status }}", "disabled": true },
+          { "type": "textfield", "key": "tester_status", "label": "Tester", "defaultValue": "{{ tester_status }}", "disabled": true },
+          { "type": "textfield", "key": "auditor_status", "label": "Auditor", "defaultValue": "{{ auditor_status }}", "disabled": true },
+          { "type": "textfield", "key": "ci_status", "label": "CI", "defaultValue": "{{ ci_status }}", "disabled": true }
+        ]
+      },
+      {
+        "type": "select",
+        "key": "decision",
+        "label": "Decision",
+        "data": {
+          "values": [
+            { "label": "Approve publish to production", "value": "approve" },
+            { "label": "Reject", "value": "reject" }
+          ]
+        },
+        "validate": { "required": true }
+      },
+      { "type": "textarea", "key": "notes", "label": "Notes (optional)", "rows": 3 },
+      { "type": "button", "key": "submit", "label": "Submit decision", "action": "submit", "theme": "primary" }
+    ]
+  }
+}

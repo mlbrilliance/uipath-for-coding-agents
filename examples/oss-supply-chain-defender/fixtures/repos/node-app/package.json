@@ -1,0 +1,20 @@
+{
+  "name": "node-app",
+  "version": "1.0.0",
+  "description": "Demo fixture: Node.js app with deliberately vulnerable dependencies for AURORA's supply-chain demo. DO NOT USE IN PRODUCTION.",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "lodash": "4.17.20",
+    "minimist": "0.2.0",
+    "axios": "0.21.0",
+    "express": "4.17.1",
+    "jsonwebtoken": "8.5.1"
+  },
+  "devDependencies": {
+    "jest": "27.0.0"
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aurora-demo-org/uipath-for-coding-agents/policy.schema.json",
+  "title": "AURORA policy.yaml schema",
+  "description": "Operating policy for the AURORA swarm. Read by Conductor on boot; validated by the aurora-policy skill.",
+  "type": "object",
+  "required": ["version", "identity", "uipath_scopes", "discovery", "build", "deploy", "operate", "gates", "memory", "routing", "budget"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Policy schema version"
+    },
+    "identity": {
+      "type": "object",
+      "required": ["uipath_folder", "action_catalog", "github_org"],
+      "additionalProperties": false,
+      "properties": {
+        "uipath_folder": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Orchestrator folder where AURORA publishes processes and creates Action Center tasks"
+        },
+        "action_catalog": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Action Center catalog name (underscored — UiPath convention; hyphens not supported)"
+        },
+        "github_org": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub organization the swarm watches and ships PRs to"
+        }
+      }
+    },
+    "uipath_scopes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^OR\\.[A-Z][a-zA-Z]*(\\.[A-Z][a-zA-Z]*)?$"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "OAuth scopes AURORA requests at runtime token mint"
+    },
+    "discovery": {
+      "type": "object",
+      "required": ["sources", "min_score_for_build", "scoring"],
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["kind", "path"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "const": "slack_jsonl_fixture" },
+                  "path": { "type": "string" }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind", "channel"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "const": "slack" },
+                  "channel": { "type": "string" }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind", "project"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "const": "jira" },
+                  "project": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "min_score_for_build": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scoring": {
+          "type": "object",
+          "required": ["weights"],
+          "additionalProperties": false,
+          "properties": {
+            "weights": {
+              "type": "object",
+              "required": ["frequency", "pain", "feasibility"],
+              "additionalProperties": false,
+              "properties": {
+                "frequency": { "type": "number", "minimum": 0, "maximum": 1 },
+                "pain": { "type": "number", "minimum": 0, "maximum": 1 },
+                "feasibility": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "required": ["prefer_pattern_when", "test_coverage_floor", "worktree_root"],
+      "additionalProperties": false,
+      "properties": {
+        "prefer_pattern_when": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["if", "pick"],
+            "additionalProperties": false,
+            "properties": {
+              "if": { "type": "string" },
+              "pick": {
+                "type": "string",
+                "enum": [
+                  "sequence",
+                  "reframework_performer",
+                  "reframework_dispatcher",
+                  "coded_workflow",
+                  "coded_agent_langgraph",
+                  "coded_agent_openai_agents",
+                  "coded_agent_llamaindex",
+                  "maestro",
+                  "action_center",
+                  "api_workflow",
+                  "document_understanding"
+                ]
+              }
+            }
+          }
+        },
+        "test_coverage_floor": { "type": "number", "minimum": 0, "maximum": 1 },
+        "worktree_root": { "type": "string" }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "required": ["dev", "test", "prod"],
+      "additionalProperties": false,
+      "properties": {
+        "dev": { "$ref": "#/$defs/deployStage" },
+        "test": { "$ref": "#/$defs/deployStage" },
+        "prod": { "$ref": "#/$defs/deployStage" }
+      }
+    },
+    "operate": {
+      "type": "object",
+      "required": ["sentry", "surgeon"],
+      "additionalProperties": false,
+      "properties": {
+        "sentry": {
+          "type": "object",
+          "required": ["poll_interval_seconds"],
+          "additionalProperties": false,
+          "properties": {
+            "poll_interval_seconds": { "type": ["integer", "string"] },
+            "use_webhooks_when_available": { "type": "boolean" }
+          }
+        },
+        "surgeon": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_auto_fixes_per_day": { "type": ["integer", "string"] },
+            "max_workflows_touched_without_hitl": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "trigger", "via"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "trigger": { "type": "string" },
+          "via": { "enum": ["action_center", "github_pr_review", "slack_dm"] },
+          "catalog": { "type": "string" },
+          "approvers_env": { "type": "string" },
+          "timeout_hours": { "type": "integer", "minimum": 1 },
+          "on_timeout": { "enum": ["escalate", "deny", "auto-approve"] },
+          "require": { "type": "string" },
+          "auto_merge": { "type": "boolean" }
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "required": ["root", "fingerprint_index"],
+      "additionalProperties": false,
+      "properties": {
+        "root": { "type": "string" },
+        "fingerprint_index": { "enum": ["sqlite", "duckdb"] }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "required": ["defaults", "bindings"],
+      "additionalProperties": false,
+      "properties": {
+        "defaults": {
+          "type": "object",
+          "required": ["high_stakes", "mid_stakes", "continuous"],
+          "additionalProperties": false,
+          "properties": {
+            "high_stakes": { "type": "string" },
+            "mid_stakes": { "type": "string" },
+            "continuous": { "type": "string" }
+          }
+        },
+        "bindings": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": {
+              "enum": ["high_stakes", "mid_stakes", "continuous"]
+            }
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": ["daily_usd", "on_exceed"],
+      "additionalProperties": false,
+      "properties": {
+        "daily_usd": { "type": ["number", "string"] },
+        "on_exceed": { "enum": ["pause_non_critical_fleets", "halt", "warn_only"] }
+      }
+    }
+  },
+  "$defs": {
+    "deployStage": {
+      "type": "object",
+      "required": ["auto"],
+      "additionalProperties": false,
+      "properties": {
+        "auto": { "type": "boolean" },
+        "gate": { "type": "string" }
+      }
+    }
+  }
+}

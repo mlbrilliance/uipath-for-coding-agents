@@ -1,0 +1,33 @@
+{
+  "findings": [
+    {
+      "ecosystem": "npm",
+      "package": "minimist",
+      "version": "0.2.0",
+      "depth": 1,
+      "advisory_id": "CVE-2021-44906",
+      "title": "Prototype Pollution in minimist",
+      "cvss": 9.8,
+      "exploit_in_wild": true,
+      "fix_version": "1.2.6",
+      "source": "nvd",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44906"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "jsonwebtoken",
+      "version": "8.5.1",
+      "depth": 1,
+      "advisory_id": "CVE-2022-23529",
+      "title": "Algorithm confusion in jsonwebtoken",
+      "cvss": 9.8,
+      "exploit_in_wild": false,
+      "fix_version": "9.0.0",
+      "source": "github-advisory"
+    }
+  ],
+  "max_cvss": 9.8,
+  "has_known_exploit": true,
+  "shallowest_depth": 1,
+  "total_count": 2
+}

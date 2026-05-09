@@ -1,0 +1,34 @@
+{
+  "name": "aurora",
+  "version": "0.1.0",
+  "description": "Autonomous UiPath RPA Operations & Reasoning Agency � a 15-agent swarm that builds, tests, deploys, monitors, and self-heals UiPath automations end-to-end.",
+  "author": {
+    "name": "Nick",
+    "email": "puneetsatyawan@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/aurora-demo-org/uipath-for-coding-agents",
+  "repository": "https://github.com/aurora-demo-org/uipath-for-coding-agents",
+  "keywords": [
+    "uipath",
+    "rpa",
+    "agentic-automation",
+    "maestro",
+    "autonomous",
+    "swarm",
+    "coding-agent"
+  ],
+  "mcpServers": {
+    "aurora": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "python",
+        "-m",
+        "aurora.mcp.server"
+      ]
+    }
+  }
+}

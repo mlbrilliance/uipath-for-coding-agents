@@ -1,0 +1,65 @@
+{
+  "$schema": "https://uipath.com/schemas/eval/v1.json",
+  "name": "vuln-lookup-triage-eval",
+  "description": "Acceptance criteria for the vuln-lookup agent — one eval per AC line in the PDD.",
+  "model": { "tier": "mid_stakes" },
+  "cases": [
+    {
+      "name": "AC-1: critical-with-exploit-flagged-as-critical",
+      "description": "Given a finding with CVSS >= 9.0 AND exploit_in_wild=true, severity must be classified as critical (verified via end-to-end Maestro instance, not the agent alone).",
+      "input": {
+        "lockfiles": [{
+          "repo": "node-app",
+          "ecosystem": "npm",
+          "deps": [{ "name": "minimist", "version": "0.2.0", "depth": 1 }]
+        }]
+      },
+      "evaluators": [
+        { "type": "json_similarity", "field": "$.findings[0].advisory_id", "expected": "CVE-2021-44906", "threshold": 0.9 },
+        { "type": "exact_match", "field": "$.has_known_exploit", "expected": true }
+      ]
+    },
+    {
+      "name": "AC-2: triage-emits-files-touched-le-3-when-non-critical",
+      "description": "Given a single high finding, triage's diff.files_touched should be <= 3 (DMN auto-merge constraint).",
+      "input": {
+        "findings": [{
+          "ecosystem": "npm", "package": "lodash", "version": "4.17.20", "depth": 1,
+          "advisory_id": "CVE-2021-23337", "title": "Command Injection", "cvss": 7.2,
+          "exploit_in_wild": false, "source": "nvd"
+        }]
+      },
+      "evaluators": [
+        { "type": "json_similarity", "field": "$.proposed_diff.files_touched", "expected": "<= 3", "threshold": 1.0 },
+        { "type": "llm_judge",
+          "criterion": "The rationale cites the CVE id explicitly, mentions the package name and the proposed fix version, and is between 2 and 5 sentences.",
+          "threshold": 0.7 }
+      ]
+    },
+    {
+      "name": "AC-3: handles-empty-input-gracefully",
+      "description": "Empty lockfile list returns total_count=0; max_cvss=0; no errors.",
+      "input": { "lockfiles": [] },
+      "evaluators": [
+        { "type": "exact_match", "field": "$.total_count", "expected": 0 },
+        { "type": "exact_match", "field": "$.max_cvss", "expected": 0.0 }
+      ]
+    },
+    {
+      "name": "AC-4: triage-rejects-major-version-bumps",
+      "description": "When the smallest fix is a minor/patch, the rationale should not propose a major upgrade.",
+      "input": {
+        "findings": [{
+          "ecosystem": "pypi", "package": "requests", "version": "2.25.0", "depth": 1,
+          "advisory_id": "CVE-2023-32681", "cvss": 6.1, "exploit_in_wild": false, "source": "nvd",
+          "fix_version": "2.31.0"
+        }]
+      },
+      "evaluators": [
+        { "type": "llm_judge",
+          "criterion": "The proposed diff bumps to a 2.x version, not a 3.x major, and the rationale explicitly justifies the smallest-correct-bump choice.",
+          "threshold": 0.7 }
+      ]
+    }
+  ]
+}
