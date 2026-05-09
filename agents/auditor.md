@@ -37,7 +37,7 @@ For every deployed package in `${UIPATH_FOLDER}`:
    Deployed SHA: a1b2c3d4...
    Repo SHA:     e5f6g7h8...
    Diff: 3 files (Workflows/GitHub/FetchLockfile.xaml, Config.xlsx, project.json)
-   Last deploy: 2026-05-09T03:55Z (by `aurora-coding-agent` external app)
+   Last deploy: 2026-05-09T03:55Z (by AURORA External App)
    Recommendation: re-deploy from repo OR back-port deployed changes to repo
    ```
 

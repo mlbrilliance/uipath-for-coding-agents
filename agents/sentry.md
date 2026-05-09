@@ -56,7 +56,7 @@ Other event kinds: `job_pending_too_long`, `queue_item_failed`, `asset_modified`
 
 ## Identity & auth
 
-Use `lib/aurora/uipath_client.py` which wraps `uipath-python` SDK with the `aurora-auth` token-mint flow. If a poll returns 401, write a `kind: auth_failed` event — Diagnostician will fingerprint it as a token-rotation issue and Surgeon will rotate.
+Use `lib/aurora/uipath_client.py` which wraps the uipath-python SDK with the `aurora-auth` token-mint flow. If a poll returns 401, write a `kind: auth_failed` event — Diagnostician will fingerprint it as a token-rotation issue and Surgeon will rotate.
 
 ## Output
 

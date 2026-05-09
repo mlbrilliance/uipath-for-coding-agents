@@ -44,26 +44,14 @@ You emit valid BPMN 2.0 XML — Maestro reads standard BPMN with UiPath extensio
     xmlns:uipath="http://uipath.com/maestro/2024">
 ```
 
-UiPath-specific binding goes in `<bpmn:extensionElements>` blocks per task:
+Task→implementation bindings live in `bindings.json` at the project root, not inline in BPMN — the inline UiPath task-binding extension element was stripped in T-A2 because it is not a documented Studio Web schema (see docs/grill-2026-05-09.md §Contradicted #2). The BPMN file stays vendor-neutral; only boundary timers and other documented BPMN constructs go in the XML:
 
 ```xml
-<bpmn:serviceTask id="FetchLockfile" name="Resolve repos and fetch lockfiles">
-  <bpmn:extensionElements>
-    <uipath:taskBinding kind="rpa-package" packageId="AuroraSupplyChainDefender" entryPoint="GitHub_FetchLockfile" />
-  </bpmn:extensionElements>
-</bpmn:serviceTask>
+<bpmn:serviceTask id="FetchLockfile" name="Resolve repos and fetch lockfiles" />
 
-<bpmn:serviceTask id="VulnLookup" name="NVD/OSV/Advisory cross-reference">
-  <bpmn:extensionElements>
-    <uipath:taskBinding kind="coded-agent" packageId="AuroraVulnLookup" framework="langgraph" />
-  </bpmn:extensionElements>
-</bpmn:serviceTask>
+<bpmn:serviceTask id="VulnLookup" name="NVD/OSV/Advisory cross-reference" />
 
 <bpmn:userTask id="ApproveEmergencyPatch" name="Approve emergency patch">
-  <bpmn:extensionElements>
-    <uipath:taskBinding kind="action-center-form" catalog="aurora_supply_chain_approvals" formRef="emergency-patch-approval" />
-    <uipath:approvers>${AURORA_EMERGENCY_APPROVERS}</uipath:approvers>
-  </bpmn:extensionElements>
   <bpmn:boundaryEvent id="ApprovalTimer" attachedToRef="ApproveEmergencyPatch" cancelActivity="false">
     <bpmn:timerEventDefinition>
       <bpmn:timeDuration>PT4H</bpmn:timeDuration>

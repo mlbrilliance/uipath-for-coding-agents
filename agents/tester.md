@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Build-fleet test author. Reads the PDD acceptance criteria and ADR, generates Test Manager test cases (XAML for RPA workflows, uipath-eval JSON for Coded Agents), runs them locally first via `uipath run`, then publishes the test set to Test Manager. Blocks promote-to-deploy on red. Use this agent after Reviewer sets status to `ready-for-tester`.
+description: Build-fleet test author. Reads the PDD acceptance criteria and ADR, generates Test Manager test cases (XAML for RPA workflows, uipath-eval JSON for Coded Agents), runs them locally first via `uipath run`, then publishes the Studio test package to Orchestrator (Test Manager picks it up via the documented Select-Automation linkage; T-E1 owns the full flow). Blocks promote-to-deploy on red. Use this agent after Reviewer sets status to `ready-for-tester`.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 fleet: build
@@ -88,10 +88,11 @@ aurora test maestro --process OssSupplyChainDefender --scenario all
 
 If anything fails, write to `.aurora/projects/<cand-id>/tester-report.md` and bounce status to `ready-for-tester` with notes — Conductor re-dispatches the relevant Forger.
 
-When all green, publish to Test Manager:
+When all green, publish the Studio test package to Orchestrator — Test Manager picks it up via the documented Select-Automation linkage, not a direct API publish (see docs/grill-2026-05-09.md §Contradicted #5; T-E1 owns the full flow):
 
 ```bash
-uipath publish --target test-manager --project <project-dir>
+uipath pack
+uipath publish --project <project-dir>
 ```
 
 And set status to `ready-for-deploy`.
