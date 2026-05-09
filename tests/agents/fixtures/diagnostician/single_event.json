@@ -1,0 +1,12 @@
+{
+  "cluster_id": "novel-fault/unclassified/Triage_Hypothesize",
+  "root_cause": "Unknown — no prior peers for this fingerprint.",
+  "fix_hypothesis": "Escalate to Conductor; do not auto-dispatch surgeon (R.SW.05).",
+  "cluster_size": 1,
+  "prior_resolutions": 0,
+  "fingerprint_kind": "novel-fault",
+  "fingerprint_refinement": "unclassified",
+  "events": [
+    {"ts": "2026-05-09T03:43:30Z", "process": "OssSupplyChainDefender"}
+  ]
+}

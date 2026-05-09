@@ -1,0 +1,10 @@
+{"ts":"2026-05-09T03:42:11Z","kind":"job_faulted","severity":"error","payload":{"job_id":1234567,"process":"OssSupplyChainDefender","step":"GitHub_FetchLockfile","exception_type":"UiPath.Core.Activities.SelectorNotFoundException"}}
+{"ts":"2026-05-09T03:42:30Z","kind":"job_faulted","severity":"error","payload":{"job_id":1234568,"process":"OssSupplyChainDefender","step":"Triage_Hypothesize","exception_type":"System.NullReferenceException"}}
+{"ts":"2026-05-09T03:43:01Z","kind":"queue_item_failed","severity":"error","payload":{"queue":"Lockfiles","item_id":"abc-001","reason":"transactional retry exhausted"}}
+{"ts":"2026-05-09T03:43:15Z","kind":"queue_idle","severity":"info","payload":{"queue":"ManualReviewQueue","idle_minutes":240}}
+{"ts":"2026-05-09T03:43:20Z","kind":"asset_missing","severity":"warning","payload":{"asset":"GITHUB_TOKEN","expected_in":"AURORA-Demo"}}
+{"ts":"2026-05-09T03:43:30Z","kind":"auth_failed","severity":"critical","payload":{"endpoint":"https://api.github.com","status_code":401,"message":"Bad credentials"}}
+{"ts":"2026-05-09T03:44:01Z","kind":"asset_modified","severity":"info","payload":{"asset":"NVD_API_KEY","modified_by":"AURORA-External-App"}}
+{"ts":"2026-05-09T03:44:30Z","kind":"robot_offline","severity":"warning","payload":{"robot":"prod-robot-03","offline_minutes":18}}
+{"ts":"2026-05-09T03:44:40Z","kind":"license_high","severity":"warning","payload":{"used":47,"total":50,"pct":0.94}}
+{"ts":"2026-05-09T03:45:00Z","kind":"maestro_instance_faulted","severity":"error","payload":{"instance_id":"inst-9001","process":"OssSupplyChainDefender","fault_step":"ParallelGateway/VulnLookup"}}

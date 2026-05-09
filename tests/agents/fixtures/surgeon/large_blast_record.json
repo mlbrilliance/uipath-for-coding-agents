@@ -1,0 +1,19 @@
+{
+  "cluster_id": "external-api-drift/nvd-schema-change/Triage_Hypothesize",
+  "root_cause": "NVD switched their advisory schema; all consumers regen needed.",
+  "fix_hypothesis": "Forger-coded regenerates the NVD client; downstream workflows updated to match.",
+  "confidence": 0.82,
+  "auto_fix": true,
+  "workflow_paths_touched": [
+    "Workflows/NVD/FetchAdvisory.xaml",
+    "Workflows/NVD/ParseAdvisory.xaml",
+    "Workflows/NVD/CacheAdvisory.xaml",
+    "Workflows/NVD/EmitDecision.xaml",
+    "Workflows/Maestro/UpdateInstance.xaml"
+  ],
+  "regression_tests": [
+    "Tests/NVD/FetchAdvisory_HappyPath.xaml",
+    "Tests/NVD/FetchAdvisory_404.xaml",
+    "Tests/NVD/CacheAdvisory_TTL.xaml"
+  ]
+}
