@@ -80,6 +80,7 @@ These conventions are loaded as a Claude Code rule file. They're a condensed, no
 - **R.SW.04** Memory access is via `aurora-recall` (read) and `aurora-fingerprint` (write). Don't read `.aurora/` directly.
 - **R.SW.05** HITL gates from `policy.yaml::gates` are absolute. Never bypass, even when "obvious."
 - **R.SW.06** Skills the Architect picked are the contract. If a skill is missing a generator you need, escalate via `.aurora/learnings/` — don't reinvent.
+- **R.SW.06.1** The official UiPath skill catalogue at <https://github.com/UiPath/skills> is canonical. Default to its skills (`uipath-rpa-workflows`, `uipath-coded-workflows`, `uipath-coded-agents`, `uipath-flow`, `uipath-platform`, `uipath-coded-apps`, `uipath-servo`) wherever applicable; install via `uipath skills install`. AURORA's ten custom skills under `skills/` extend the catalogue — they never replace a UiPath/skills equivalent. Before authoring a new builder skill, check UiPath/skills first; if the gap is real, file a `.aurora/learnings/` entry rather than write a parallel custom skill.
 - **R.SW.07** Decisions that recur belong in `policy.yaml`. If you find yourself making the same call repeatedly, propose a policy update.
 
 ## R.TEST — Testing discipline
