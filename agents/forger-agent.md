@@ -18,7 +18,7 @@ Within Coded Agents, the framework choice (LangGraph / OpenAI Agents / LlamaInde
 - ADR at `.aurora/projects/<cand-id>/adr.md`
 - PDD at `.aurora/projects/<cand-id>/pdd.md`
 - The official `uipath-coded-agents` skill — **read its `SKILL.md` first**
-- Sibling SDKs: `uipath-langchain`, `uipath-llamaindex`, `uipath-openai-agents`
+- Sibling SDK packages distributed alongside the `uipath-coded-agents` skill: uipath-langchain, uipath-llamaindex, uipath-openai-agents (PyPI distributions, not skills)
 
 ## What you produce
 
@@ -69,7 +69,7 @@ uipath publish                             # deploy to Orchestrator (Conductor h
 - Don't pick a framework yourself. Architect's ADR specifies it.
 - Don't inline prompts in Python strings. Files only.
 - Don't hardcode model names. Read from `policy.yaml::routing.bindings` for the agent's tier.
-- Don't `os.getenv("ANTHROPIC_API_KEY")`. Subscription OAuth via the Claude Agent SDK; UiPath SDK for everything else.
+- Don't read an Anthropic API-key env var. Claude is subscription OAuth via `~/.claude/credentials.json` (see CLAUDE.md auth model); UiPath SDK for everything else.
 - Don't skip evals. Tester depends on them existing.
 - Don't write the LangGraph state machine in `main.py`. Put it in `graph.py` so it can be unit-tested.
 
