@@ -39,4 +39,7 @@ package-lock.json
 
 # OS
 .DS_Store
-Thumbs.dblocal_cache/
+Thumbs.db
+
+# Embedding model cache (downloaded by aurora-fingerprint at runtime)
+local_cache/
