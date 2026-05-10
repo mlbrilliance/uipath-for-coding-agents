@@ -21,6 +21,9 @@
     id="OssSupplyChainDefender_Definitions"
     targetNamespace="https://aurora-demo-org/oss-supply-chain-defender">
 
+  <!-- Message definition: CI completion event (correlation key pr_url — T-D1 contract) -->
+  <bpmn:message id="Message_GithubChecksCompleted" name="github-checks-completed" />
+
   <bpmn:process id="OssSupplyChainDefender" name="OSS Supply-Chain Defender" isExecutable="true">
 
     <!-- ================== Start: Timer ================== -->
@@ -177,14 +180,31 @@
         <bpmn:incoming>Flow_C_Yes_OpenPR</bpmn:incoming>
         <bpmn:outgoing>Flow_C_PR_WaitCI</bpmn:outgoing>
       </bpmn:serviceTask>
-      <bpmn:sequenceFlow id="Flow_C_PR_WaitCI" sourceRef="OpenPatchPR" targetRef="WaitForCI" />
+      <bpmn:sequenceFlow id="Flow_C_PR_WaitCI" sourceRef="OpenPatchPR" targetRef="PostPendingComment" />
 
-      <!-- Wait for CI (T-D2 will reshape this to Send Task + intermediate message catch) -->
-      <bpmn:receiveTask id="WaitForCI" name="Wait for CI (GitHub webhook)">
+      <!-- Send Task: post "AURORA is watching CI" audit-trail comment on the PR -->
+      <bpmn:sendTask id="PostPendingComment" name="Post CI-watching comment on PR">
         <bpmn:incoming>Flow_C_PR_WaitCI</bpmn:incoming>
+        <bpmn:outgoing>Flow_C_Post_Wait</bpmn:outgoing>
+      </bpmn:sendTask>
+      <bpmn:sequenceFlow id="Flow_C_Post_Wait" sourceRef="PostPendingComment" targetRef="WaitForCI" />
+
+      <!-- Intermediate message catch: pause until CI webhook fires (correlated by pr_url) -->
+      <bpmn:intermediateCatchEvent id="WaitForCI" name="Wait for CI result (message, correlation pr_url)">
+        <bpmn:incoming>Flow_C_Post_Wait</bpmn:incoming>
         <bpmn:outgoing>Flow_C_CI_AutoMerge</bpmn:outgoing>
-      </bpmn:receiveTask>
+        <bpmn:messageEventDefinition messageRef="Message_GithubChecksCompleted" />
+      </bpmn:intermediateCatchEvent>
       <bpmn:sequenceFlow id="Flow_C_CI_AutoMerge" sourceRef="WaitForCI" targetRef="AutoMerge" />
+
+      <!-- Boundary timer: bounded wait on CI (default 4h per policy.yaml::operate.maestro.waitforci_timeout_iso8601) -->
+      <bpmn:boundaryEvent id="CIWaitTimer" attachedToRef="WaitForCI" cancelActivity="true">
+        <bpmn:outgoing>Flow_C_CITimer_End</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT4H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:sequenceFlow id="Flow_C_CITimer_End" sourceRef="CIWaitTimer" targetRef="Critical_End" />
 
       <!-- Auto-merge if green per DMN -->
       <bpmn:businessRuleTask id="AutoMerge" name="Auto-merge if green (DMN policy)">
@@ -203,6 +223,7 @@
       <bpmn:endEvent id="Critical_End">
         <bpmn:incoming>Flow_C_No_End</bpmn:incoming>
         <bpmn:incoming>Flow_C_Notify_End</bpmn:incoming>
+        <bpmn:incoming>Flow_C_CITimer_End</bpmn:incoming>
       </bpmn:endEvent>
     </bpmn:subProcess>
     <bpmn:sequenceFlow id="Flow_Critical_End" sourceRef="CriticalSubProcess" targetRef="End_RunComplete" />

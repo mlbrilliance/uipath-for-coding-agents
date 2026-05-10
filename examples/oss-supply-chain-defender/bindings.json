@@ -146,11 +146,22 @@
         "outputs": { "pr_url": "pr_url" }
       }
     },
+    "PostPendingComment": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "GitHub.PostPendingComment.PostPendingComment",
+      "language": "csharp",
+      "timeout_seconds": 60,
+      "retry_policy": { "max_attempts": 3, "delay_seconds": 5 },
+      "io": {
+        "inputs":  { "repoFullName": "pr_url", "pullNumber": "proposed_diff.pull_number" },
+        "outputs": { "commentMarker": "ci_comment_marker" }
+      }
+    },
     "WaitForCI": {
-      "kind": "message-receive",
+      "kind": "message-catch",
       "message": "github-checks-completed",
-      "correlation_key_var": "pr_url",
-      "timeout_seconds": 1800
+      "correlation_key_var": "pr_url"
     },
     "AutoMerge": {
       "kind": "dmn",
