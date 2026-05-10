@@ -74,3 +74,5 @@ Plus `project.json` updates declaring `UiPath.CodedWorkflows`, `UiPath.WebAPI.Ac
 ```
 forger-coded: CAND-… emitted 4 .cs files in worktree <path>, package refs added, ready for reviewer
 ```
+
+Done when the `.cs` files compile cleanly in the worktree and the `ready for reviewer` summary is emitted — then hand off to Reviewer.

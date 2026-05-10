@@ -26,6 +26,8 @@ For each target app referenced in the ADR, produce:
 2. **`references.json`** — flat list of all selector references for the project, used by Forgers
 3. **`.aurora/projects/<cand-id>/cartographer-report.md`** — what was inspected, what failed, what fell back
 
+The `.objects/` tree is the Object Repository surface that `uipath-rpa-workflows` (XAML) and `uipath-servo` (UI inspection / desktop) skills consume downstream — your selectors are the contract those skills bind against, so keep the schema strict.
+
 ## How you inspect
 
 **Web (Playwright MCP):**
@@ -68,3 +70,5 @@ A one-line summary:
 ```
 cartographer: CAND-… mapped 4 apps, 23 elements, 0 auth blockers, all strict + fallbacked
 ```
+
+Done when `.objects/` and `references.json` are written and the one-line summary is emitted — then hand off to the Forger sub-fleet, which consumes the references at build time.

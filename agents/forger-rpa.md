@@ -64,3 +64,5 @@ A one-line summary plus paths:
 ```
 forger-rpa: CAND-… emitted 7 XAML files in worktree <path>, 0 lint warnings, ready for reviewer
 ```
+
+Done when the XAML files are written, `project.json` is updated, and the `ready for reviewer` summary is emitted — then hand off to Reviewer for lint and discipline checks.

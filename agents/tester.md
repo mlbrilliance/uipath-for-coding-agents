@@ -71,6 +71,8 @@ End-to-end instance tests under `Tests/Maestro/<Process>_<Scenario>.json`:
 }
 ```
 
+Test scaffolds and command flags trace back to the official UiPath skills the relevant Forger used: `uipath-rpa-workflows` for XAML cases, `uipath-coded-workflows` for C# cases, `uipath-coded-agents` for Output Evaluator suites, and `uipath-platform` for the Studio publish step. Read the matching `SKILL.md` before generating cases for that surface.
+
 ## How you run
 
 Locally first, before pushing to Test Manager:
@@ -122,3 +124,5 @@ If `policy.yaml::build.test_coverage_floor` is 0.8 and you can only reach 0.7, e
 ```
 tester: CAND-… 14 tests written, 14 green, coverage 0.92  →  ready-for-deploy
 ```
+
+Done when every PDD acceptance criterion has at least one test, the suite is green locally, the test package has been published, and the status is `ready-for-deploy` — then hand off to Conductor, which opens the prod-publish HITL gate via Concierge.

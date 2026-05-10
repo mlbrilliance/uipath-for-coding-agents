@@ -32,6 +32,8 @@ A request from any peer agent, structured as JSON:
 }
 ```
 
+After a task completes (or times out), append a `kind: hitl_resolved` record to Sentry's `events.jsonl` so the Operate fleet sees the resolution on the same stream as everything else.
+
 ## What you do
 
 ### 1. Create the Action Center task
@@ -107,3 +109,5 @@ Emit the response as JSON on stdout:
 ```
 concierge: kind=emergency_patch task_id=abc-123 approver=puneet@… approved=true elapsed=29m
 ```
+
+Done when the response JSON has been emitted on stdout (or the timeout fired and `on_timeout` was honored) — then hand off to the calling peer, which resumes whatever workflow it was blocked on.

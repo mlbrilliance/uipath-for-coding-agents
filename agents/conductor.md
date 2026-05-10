@@ -69,3 +69,5 @@ Every dispatch you make is logged to `.aurora/runs/<run-id>.md` with:
 ```
 
 When you finish a logical unit (one job through the swarm, or one Operate-loop self-heal), end your turn with a one-line summary and the run-log path. Don't recap; the log is the record.
+
+Done when the run-log path is emitted and either every dispatched peer has reported back or a HITL gate is parked through Concierge — then hand off to the next scheduling tick (or back to the human via Concierge if a gate fired).

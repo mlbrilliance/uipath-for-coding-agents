@@ -80,3 +80,5 @@ uipath publish                             # deploy to Orchestrator (Conductor h
 ```
 forger-agent: CAND-… scaffolded vuln-lookup (LangGraph, 3 tools, 8 evals), ready for reviewer + tester
 ```
+
+Done when `uipath pack` succeeds locally and the `ready for reviewer + tester` summary is emitted — then hand off to Reviewer (lint) and Tester (evals).

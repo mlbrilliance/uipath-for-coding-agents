@@ -15,7 +15,7 @@ You read from the sources configured in `policy.yaml::discovery.sources`. For v1
 
 ## Output
 
-For each new friction signal, emit a JSON object on stdout that `curator` will consume:
+For each new friction signal, emit a JSON object on stdout that `curator` will consume — Curator owns the `.aurora/backlog.md` file; you only feed it.
 
 ```json
 {
