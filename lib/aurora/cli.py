@@ -52,15 +52,19 @@ def cmd_start(args: argparse.Namespace) -> int:
         print(f"[aurora] warning: {w}", file=sys.stderr)
     print(f"[aurora] policy: valid ({len(warnings)} warning(s))")
 
+    if args.skip_daemons:
+        # In-session boot only — no Orchestrator contact, so skip the token
+        # mint. Useful for `make ci`, dev sandboxes, and the F3 smoke test
+        # against a non-provisioned tenant.
+        print("[aurora] --skip-daemons: skipping UiPath token mint")
+        print("[aurora] --skip-daemons: not starting Operate fleet")
+        print("[aurora] conductor: ready (in-session mode)")
+        return 0
+
     print("[aurora] minting UiPath token…", flush=True)
     repo_root = find_repo_root()
     token = ensure_fresh_token(write_dotenv_path=repo_root / ".env")
     print(f"[aurora] uipath token: minted, expires_at={token.expires_at}, scopes={len(token.scope.split())}")
-
-    if args.skip_daemons:
-        print("[aurora] --skip-daemons: not starting Operate fleet")
-        print("[aurora] conductor: ready (in-session mode)")
-        return 0
 
     # Spawn the conductor daemon in-process.
     print("[aurora] starting conductor daemon…", flush=True)
