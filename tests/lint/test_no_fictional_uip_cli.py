@@ -24,6 +24,9 @@ EXCLUDED_PATHS = {
     # `banned_patterns.py` documents the regex itself; the literal word
     # `uip` in its rationale comment is its raison d'être.
     "tests/agents/banned_patterns.py",
+    # The submission post explicitly narrates the `uip → uipath` rename
+    # for the reviewer's benefit.
+    "docs/submission-post.md",
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "local_cache", ".pytest_cache", "node_modules"}

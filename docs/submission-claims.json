@@ -1,0 +1,280 @@
+{
+  "$schema_note": "Each entry is a load-bearing claim from docs/submission-post.md mapped to one or more on-disk artifacts that prove it. tests/docs/test_submission_claims.py asserts every `evidence` path exists (test files, source modules, or documented runbooks).",
+  "claims": [
+    {
+      "id": "C-INNOV-1",
+      "section": "Three concurrent fleets, not phases",
+      "claim": "AURORA models the lifecycle as Discovery + Build + Operate, three concurrent loops with a shared Conductor.",
+      "evidence": [
+        "agents/conductor.md",
+        "agents/scout.md",
+        "agents/architect.md",
+        "agents/sentry.md",
+        "tests/agents/test_conductor.py",
+        "lib/aurora/conductor.py"
+      ]
+    },
+    {
+      "id": "C-INNOV-2",
+      "section": "Self-evolving skills via the nightly compost step",
+      "claim": "Conductor's nightly compost reads learnings, filters for ≥3 occurrences across ≥2 projects, opens a real `gh pr create --draft` against this repo's `skills/<name>/SKILL.md`, and routes through Action Center for HITL review.",
+      "evidence": [
+        "lib/aurora/compost.py",
+        "skills/aurora-compost/SKILL.md",
+        "tests/unit/test_compost.py"
+      ]
+    },
+    {
+      "id": "C-INNOV-3",
+      "section": "Policy-as-code",
+      "claim": "policy.yaml is schema-validated and live-probed via `aurora policy validate --strict --live`.",
+      "evidence": [
+        "policy.yaml",
+        "policy.schema.json",
+        "lib/aurora/policy.py",
+        "lib/aurora/policy_live.py",
+        "tests/unit/test_policy_live.py",
+        "tests/unit/test_policy.py"
+      ]
+    },
+    {
+      "id": "C-INNOV-4",
+      "section": "Dual-tier auth via subscription OAuth",
+      "claim": "Both Claude Code subagents and the Claude Agent SDK daemons read `~/.claude/credentials.json`. `.claude/settings.json` deny-rule on `anthropic.com/v1/messages` enforces it.",
+      "evidence": [
+        "lib/aurora/auth.py",
+        "skills/aurora-auth/SKILL.md",
+        ".claude/settings.json",
+        "tests/agents/test_prompt_invariants.py"
+      ]
+    },
+    {
+      "id": "C-INNOV-5",
+      "section": "Federated worktrees",
+      "claim": "Forger sub-fleet builds in parallel git worktrees under `${AURORA_WORKTREE_DIR}/<job-id>/`, capped per `policy.yaml::worktree_pool.max_concurrent`.",
+      "evidence": [
+        "lib/aurora/conductor.py",
+        "policy.yaml",
+        "tests/agents/test_conductor.py"
+      ]
+    },
+    {
+      "id": "C-DEMO-MAESTRO",
+      "section": "Maestro-orchestrated agentic process",
+      "claim": "Every BPMN construct is exercised: timer-start, parallel + exclusive gateways, business-rule task, user task with boundary timer, send/receive tasks, sub-process.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/process.bpmn",
+        "examples/oss-supply-chain-defender/bindings.json",
+        "tests/lint/test_bpmn_no_inline_taskbinding.py",
+        "tests/lint/test_bpmn_bindings_complete.py",
+        "tests/lint/test_waitforci_shape.py"
+      ]
+    },
+    {
+      "id": "C-DEMO-RPA",
+      "section": "RPA bots (XAML)",
+      "claim": "License drift detection runs as a real XAML workflow with ClearlyDefined.io primary + GitHub Licenses fallback.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/workflows/License/CheckLicenseDrift.xaml",
+        "tests/workflows/test_check_license_drift_xaml.py"
+      ]
+    },
+    {
+      "id": "C-DEMO-CODED-WORKFLOW",
+      "section": "Coded Workflows (C#)",
+      "claim": "Five Coded Workflows shipped: ResolveLockfiles, Typosquat, Notify (with AppendToDigest), OpenPatchPR, OpenAutoPR, PostPendingComment.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/coded/ResolveLockfiles/Resolve.cs",
+        "examples/oss-supply-chain-defender/coded/Typosquat/CheckLockfiles.cs",
+        "examples/oss-supply-chain-defender/coded/Notify/SendDigest.cs",
+        "examples/oss-supply-chain-defender/coded/OpenPatchPR/OpenPatchPR.cs",
+        "examples/oss-supply-chain-defender/coded/OpenAutoPR/OpenAutoPR.cs",
+        "examples/oss-supply-chain-defender/coded/PostPendingComment/PostPendingComment.cs",
+        "tests/coded/ResolveLockfiles.Tests/ResolveTests.cs",
+        "tests/coded/Typosquat.Tests/CheckLockfilesTests.cs",
+        "tests/coded/Notify.Tests/SendDigestTests.cs",
+        "tests/coded/OpenPatchPR.Tests/OpenTests.cs",
+        "tests/coded/OpenAutoPR.Tests/OpenTests.cs",
+        "tests/coded/PostPendingComment.Tests/PostPendingCommentTests.cs"
+      ]
+    },
+    {
+      "id": "C-DEMO-CODED-AGENT",
+      "section": "Coded Agents (Python)",
+      "claim": "MaintainerHealth Coded Agent on the OpenAI Agents SDK; VulnLookup on LangGraph.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/agents/maintainer-health/main.py",
+        "examples/oss-supply-chain-defender/agents/vuln-lookup/main.py",
+        "examples/oss-supply-chain-defender/agents/maintainer-health/uipath.json",
+        "examples/oss-supply-chain-defender/agents/vuln-lookup/uipath.json"
+      ]
+    },
+    {
+      "id": "C-DEMO-WEBHOOK",
+      "section": "FastAPI webhook for GitHub check_run.completed",
+      "claim": "HMAC-verified `POST /github/check-run` resolves the Maestro instance by correlation key `pr_url` and POSTs the conclusion message.",
+      "evidence": [
+        "webhook/github-check-run/app.py",
+        "webhook/github-check-run/security.py",
+        "webhook/github-check-run/maestro_client.py",
+        "webhook/github-check-run/tests/test_webhook.py",
+        "docs/webhook-deploy.md"
+      ]
+    },
+    {
+      "id": "C-DEMO-MAESTRO-PUBLISH",
+      "section": "Maestro publish bridge",
+      "claim": "MaestroService.publish_maestro_project HTTP wrapper + Playwright capture tool + UI fallback.",
+      "evidence": [
+        "lib/aurora/uipath_client.py",
+        "lib/aurora/playwright/capture.py",
+        "lib/aurora/playwright/publish_ui_fallback.py",
+        "tests/unit/test_maestro_publish.py",
+        "docs/maestro-publish-bridge.md"
+      ]
+    },
+    {
+      "id": "C-DEMO-TEST-MANAGER",
+      "section": "Test Manager linkage",
+      "claim": "Tester links published packages to Test Manager test cases via TestManagerClient.link_automation; UI fallback for API rotation.",
+      "evidence": [
+        "lib/aurora/test_manager.py",
+        "lib/aurora/playwright/test_manager_ui.py",
+        "tests/unit/test_test_manager.py",
+        "agents/tester.md",
+        "docs/test-manager-linkage.md"
+      ]
+    },
+    {
+      "id": "C-BONUS-MULTI-STEP",
+      "section": "Bonus: Multi-step reasoning end-to-end",
+      "claim": "Build → Run → Debug → Fix → Deploy → Monitor → Heal → Govern → Self-improve, in one take.",
+      "evidence": [
+        "tests/agents/test_conductor.py",
+        "docs/demo-script.md"
+      ]
+    },
+    {
+      "id": "C-BONUS-MULTI-AGENT",
+      "section": "Bonus: Multi-agent setups with clear roles",
+      "claim": "19 agents in 3 fleets + 1 Conductor; cross-fleet handoffs go through Conductor (R.SW.02).",
+      "evidence": [
+        "agents/scout.md",
+        "agents/curator.md",
+        "agents/analyst.md",
+        "agents/interviewer.md",
+        "agents/strategist.md",
+        "agents/architect.md",
+        "agents/cartographer.md",
+        "agents/forger-rpa.md",
+        "agents/forger-coded.md",
+        "agents/forger-agent.md",
+        "agents/forger-maestro.md",
+        "agents/reviewer.md",
+        "agents/tester.md",
+        "agents/sentry.md",
+        "agents/diagnostician.md",
+        "agents/surgeon.md",
+        "agents/auditor.md",
+        "agents/concierge.md",
+        "agents/conductor.md",
+        "tests/agents/test_conductor.py",
+        "tests/agents/test_all_agents_lint.py"
+      ]
+    },
+    {
+      "id": "C-BONUS-HITL",
+      "section": "Bonus: HITL on risky steps",
+      "claim": "Five gates declared in policy.yaml::gates, each routing through Concierge to Action Center.",
+      "evidence": [
+        "policy.yaml",
+        "agents/concierge.md",
+        "lib/aurora/promote.py",
+        "tests/unit/test_promote.py",
+        "tests/agents/test_conductor.py"
+      ]
+    },
+    {
+      "id": "C-BONUS-SKILLS",
+      "section": "Bonus: Skills mastery",
+      "claim": "Uses all 7 official UiPath skills + extends with 10 AURORA skills. Reviewer-driven prompt-body lint enforces R.SW.06.1.",
+      "evidence": [
+        "skills/aurora-auth/SKILL.md",
+        "skills/aurora-discover/SKILL.md",
+        "skills/aurora-pdd/SKILL.md",
+        "skills/aurora-fingerprint/SKILL.md",
+        "skills/aurora-replay/SKILL.md",
+        "skills/aurora-promote/SKILL.md",
+        "skills/aurora-recall/SKILL.md",
+        "skills/aurora-compost/SKILL.md",
+        "skills/aurora-policy/SKILL.md",
+        "skills/aurora-deprecate/SKILL.md",
+        "tests/agents/test_all_agents_lint.py",
+        "tests/agents/reviewer_rules.py"
+      ]
+    },
+    {
+      "id": "C-D1-BPMN-BINDINGS",
+      "section": "Final-mile D1",
+      "claim": "BPMN <uipath:taskBinding> stripped; bindings.json is the single source of truth.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/bindings.json",
+        "tests/lint/test_bpmn_no_inline_taskbinding.py"
+      ]
+    },
+    {
+      "id": "C-D2-WAITFORCI",
+      "section": "Final-mile D2",
+      "claim": "WaitForCI is Send Task → intermediate message catch (correlation key pr_url) → boundary timer PT4H.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/process.bpmn",
+        "tests/lint/test_waitforci_shape.py"
+      ]
+    },
+    {
+      "id": "C-D5-WEBHOOK-CLOUDFLARED",
+      "section": "Final-mile D5",
+      "claim": "Webhook deploy via Cloudflare Tunnel, documented end-to-end.",
+      "evidence": [
+        "webhook/github-check-run/app.py",
+        "docs/webhook-deploy.md"
+      ]
+    },
+    {
+      "id": "C-D6-LICENSE-CLEARLYDEFINED",
+      "section": "Final-mile D6",
+      "claim": "License drift uses ClearlyDefined.io primary + GitHub Licenses fallback.",
+      "evidence": [
+        "examples/oss-supply-chain-defender/workflows/License/CheckLicenseDrift.xaml",
+        "tests/workflows/test_check_license_drift_xaml.py"
+      ]
+    },
+    {
+      "id": "C-A1-CLI-RENAME",
+      "section": "Final-mile correction",
+      "claim": "The CLI is `uipath`, not `uip`. Regression-tested.",
+      "evidence": [
+        "tests/lint/test_no_fictional_uip_cli.py"
+      ]
+    },
+    {
+      "id": "C-HOOK-TRIAGE",
+      "section": "What broke or surprised me — hooks",
+      "claim": "Hooks are +x and downstream skill scripts are +x. Each hook smoke-runs to exit 0 + empty stderr in a stripped env. Failure-classification branch fires on real CC PostToolUse payloads.",
+      "evidence": [
+        "tests/lint/test_hooks_executable_and_clean.py",
+        "tests/lint/fixtures/hooks/posttooluse_bash_failure.json",
+        "tests/lint/fixtures/hooks/posttooluse_edit_failure.json"
+      ]
+    },
+    {
+      "id": "C-F3-BOOT",
+      "section": "Try it yourself — CI smoke",
+      "claim": "`aurora start --skip-daemons` boots cleanly without a live tenant; full daemon run is a documented runbook.",
+      "evidence": [
+        "tests/unit/test_aurora_start_boot.py",
+        "docs/runbook-aurora-start.md"
+      ]
+    }
+  ]
+}
