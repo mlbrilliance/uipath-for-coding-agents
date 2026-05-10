@@ -162,9 +162,7 @@ def test_stage_4_surgeon_can_list_assets_against_live_tenant(
     integration_env_or_skip: dict[str, str],
 ) -> None:
     """Stage 4: Surgeon's read path against /odata/Assets succeeds with
-    folder-scoped auth. The write path (`update_asset`) is not executed
-    here — rotating real Credential assets is a destructive op deferred
-    to docs/runbook-aurora-start.md.
+    folder-scoped auth.
 
     Asserts only that a non-error response comes back; the actual
     asset count is environment-dependent."""
@@ -179,3 +177,47 @@ def test_stage_4_surgeon_can_list_assets_against_live_tenant(
         # OData shape: {"@odata.context": ..., "value": [...]}.
         assert "value" in body
         assert isinstance(body["value"], list)
+
+
+def test_stage_5_surgeon_round_trips_asset_value_against_live_tenant(
+    integration_env_or_skip: dict[str, str],
+) -> None:
+    """Stage 5: the FULL Surgeon write path against the live tenant.
+
+    Round-trip: read GITHUB_TOKEN, write a probe value, verify it
+    landed, write the original back, verify restoration. Non-destructive
+    by construction — final state == original state.
+
+    Skipped (with a clear message) if the GITHUB_TOKEN asset isn't yet
+    provisioned in AURORA-Demo. The runbook tells the operator how to
+    provision it via the UiPath UI in 1 minute."""
+    client = UiPathClient(folder=os.environ.get("UIPATH_FOLDER", "AURORA-Demo"))
+    try:
+        original_asset = client.get_asset("GITHUB_TOKEN")
+    except RuntimeError as e:
+        pytest.skip(
+            f"GITHUB_TOKEN asset not provisioned in folder; create via "
+            f"UiPath UI to enable Stage 5: {e}"
+        )
+
+    original_value = original_asset.get("StringValue") or ""
+    assert original_value, "GITHUB_TOKEN asset has no StringValue — provision it first"
+
+    probe = "aurora-self-heal-roundtrip-probe"
+    try:
+        # Write probe.
+        client.update_asset("GITHUB_TOKEN", probe)
+        # Read back; assert the change landed.
+        after = client.get_asset("GITHUB_TOKEN")
+        assert after.get("StringValue") == probe, (
+            "probe value did not land — Surgeon write path broken"
+        )
+    finally:
+        # Restore — this MUST succeed even if assertions above fail,
+        # so the asset is never left in a probe state.
+        client.update_asset("GITHUB_TOKEN", original_value)
+
+    final = client.get_asset("GITHUB_TOKEN")
+    assert final.get("StringValue") == original_value, (
+        "restoration failed — GITHUB_TOKEN asset is now in an unexpected state"
+    )

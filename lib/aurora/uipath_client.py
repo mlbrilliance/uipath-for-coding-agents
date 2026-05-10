@@ -169,12 +169,50 @@ class UiPathClient:
     # ---------- Assets ----------
 
     def get_asset(self, name: str) -> dict[str, Any]:
-        with self.folder_context():
-            return self.sdk.assets.retrieve(name=name)  # type: ignore[no-any-return]
+        """Read an Orchestrator Asset by name (folder-scoped).
+
+        Bypasses sdk.assets.retrieve because it routes through
+        /api/FoldersNavigation which requires a higher OAuth scope than
+        our OR.* set. The /odata/Assets surface works with OR.Assets.
+        """
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get("/odata/Assets", params={"$filter": f"Name eq '{name}'", "$top": 1})
+            r.raise_for_status()
+            items = r.json().get("value", [])
+            if not items:
+                raise RuntimeError(f"asset {name!r} not found in folder {self.folder!r}")
+            return cast(dict[str, Any], items[0])
 
     def update_asset(self, name: str, value: str) -> None:
-        with self.folder_context():
-            self.sdk.assets.update(name=name, value=value)
+        """Set the StringValue of a Text-type Orchestrator Asset.
+
+        UiPath OData asset update requires PUT /odata/Assets({id}) with
+        the FULL asset body (not a partial PATCH — that returns 404).
+        We do a read-modify-write: fetch the asset, mutate StringValue,
+        PUT back. This is what `surgeon` calls to rotate GITHUB_TOKEN
+        to GITHUB_TOKEN_FALLBACK on auth-failed clusters.
+
+        sdk.assets.update is not used because it routes through the
+        SetRobotAssetByRobotKey OData action which requires a robot
+        execution context (a robot_key from the running job's runtime),
+        which AURORA's daemon-side caller doesn't have.
+
+        For non-Text assets (BoolValue, IntValue, CredentialPassword),
+        extend this method or add a parameter.
+        """
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get("/odata/Assets", params={"$filter": f"Name eq '{name}'", "$top": 1})
+            r.raise_for_status()
+            items = r.json().get("value", [])
+            if not items:
+                raise RuntimeError(f"asset {name!r} not found in folder {self.folder!r}")
+            asset = items[0]
+            asset_id = asset["Id"]
+            # Strip OData metadata fields that confuse the PUT.
+            body = {k: v for k, v in asset.items() if not k.startswith("@")}
+            body["StringValue"] = value
+            pr = client.put(f"/odata/Assets({asset_id})", json=body)
+            pr.raise_for_status()
 
     # ---------- Action Center (Tasks) ----------
 
