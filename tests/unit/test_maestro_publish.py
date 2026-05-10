@@ -1,6 +1,6 @@
 """Unit tests for Maestro publish bridge (HTTP-API wrapper + UI fallback).
 
-TDD RED-phase: contract assertions that define the expected behaviour of
+TDD contract assertions that define the expected behaviour of
 ``UiPathClient.publish_maestro_project`` and
 ``aurora.playwright.publish_ui_fallback.publish_via_ui``.
 
@@ -11,12 +11,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from aurora.uipath_client import UiPathClient
+from aurora.uipath_client import FolderRef, UiPathClient
 
 FIXTURE_REQ = Path(__file__).resolve().parents[1] / "fixtures" / "maestro" / "publish_request.json"
+FAKE_FOLDER_REF = FolderRef(name="AURORA-Demo", id=999)
+
+# When UIPATH_URL = https://cloud.example.test/acct/tenant/orchestrator_
+# the code strips /orchestrator_ and appends the fixture's url_path.
+# Result: https://cloud.example.test/acct/tenant/studio_/api/publish
+PUBLISH_URL = "https://cloud.example.test/acct/tenant/studio_/api/publish"
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +32,9 @@ FIXTURE_REQ = Path(__file__).resolve().parents[1] / "fixtures" / "maestro" / "pu
 def _client(monkeypatch: pytest.MonkeyPatch) -> UiPathClient:
     monkeypatch.setenv("UIPATH_URL", "https://cloud.example.test/acct/tenant/orchestrator_")
     monkeypatch.setenv("UIPATH_ACCESS_TOKEN", "fake-token")
-    return UiPathClient(folder="AURORA-Demo")
+    client = UiPathClient(folder="AURORA-Demo")
+    client.resolve_folder = lambda: FAKE_FOLDER_REF  # type: ignore[assignment]
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +47,7 @@ def test_publishes_with_recorded_fixture(httpx_mock: pytest.HTTPXMock, monkeypat
     parsed response."""
     httpx_mock.add_response(
         method="POST",
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         json={"version": "1.0.2", "status": "Published"},
     )
     client = _client(monkeypatch)
@@ -49,7 +57,6 @@ def test_publishes_with_recorded_fixture(httpx_mock: pytest.HTTPXMock, monkeypat
     )
     assert result["version"] == "1.0.2"
 
-    # Assert the request shape matches the captured fixture's URL / method.
     requests = httpx_mock.get_requests()
     assert len(requests) == 1
     req = requests[0]
@@ -67,10 +74,12 @@ def test_publish_request_has_required_headers(httpx_mock: pytest.HTTPXMock, monk
     monkeypatch.setenv("UIPATH_URL", "https://cloud.example.test/acct/tenant/orchestrator_")
     monkeypatch.setenv("UIPATH_ACCESS_TOKEN", "fake-token")
     httpx_mock.add_response(
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         json={"version": "1.0.0"},
     )
-    UiPathClient(folder="AURORA-Demo").publish_maestro_project(
+    client = UiPathClient(folder="AURORA-Demo")
+    client.resolve_folder = lambda: FAKE_FOLDER_REF  # type: ignore[assignment]
+    client.publish_maestro_project(
         project_dir=Path("/tmp/dummy"), version_bump="patch",
     )
     req = httpx_mock.get_requests()[-1]
@@ -87,7 +96,7 @@ def test_publish_request_has_required_headers(httpx_mock: pytest.HTTPXMock, monk
 def test_publish_handles_4xx_with_business_exception(httpx_mock: pytest.HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
     """4xx → BusinessException with status code; not retried (per R.E.03)."""
     httpx_mock.add_response(
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         status_code=403,
         json={"error": "Forbidden"},
     )
@@ -107,16 +116,17 @@ def test_publish_handles_4xx_with_business_exception(httpx_mock: pytest.HTTPXMoc
 def test_publish_retries_on_5xx(httpx_mock: pytest.HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
     """5xx → retry up to 3x with exponential backoff (R.E.02). Mock 2 failures
     then a success; assert 3 calls + success returned."""
+    monkeypatch.setattr("time.sleep", lambda _: None)  # skip backoff delays
     httpx_mock.add_response(
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         status_code=502,
     )
     httpx_mock.add_response(
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         status_code=502,
     )
     httpx_mock.add_response(
-        url="https://cloud.example.test/studio_/api/publish",
+        url=PUBLISH_URL,
         json={"version": "1.0.0"},
     )
     client = _client(monkeypatch)
@@ -135,24 +145,45 @@ def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
     """publish_ui_fallback.py exposes a sync ``publish_via_ui(...)`` callable
     with the same signature as the HTTP wrapper. Mock playwright so no
     browser opens."""
-    from aurora.playwright.publish_ui_fallback import publish_via_ui
+    monkeypatch.setenv("UIPATH_ACCOUNT_SLUG", "test-acct")
+    monkeypatch.setenv("UIPATH_TENANT_SLUG", "test-tenant")
 
-    # Mock the playwright.sync_api.sync_playwright context manager
-    mock_pw = MagicMock()
-    mock_browser = MagicMock()
     mock_page = MagicMock()
+    mock_page.wait_for_load_state = MagicMock()
+    mock_publish_btn = MagicMock()
+    mock_page.wait_for_selector.return_value = mock_publish_btn
+    mock_page.wait_for_timeout = MagicMock()
     mock_page.url = "https://cloud.uipath.com"
-    mock_browser.new_page.return_value = mock_page
-    mock_pw.start.return_value.__enter__ = MagicMock(return_value=mock_pw.start.return_value)
-    mock_pw.start.return_value.__exit__ = MagicMock(return_value=False)
-    mock_pw.start.return_value.chromium.launch.return_value = mock_browser
-    # Simulate the publish UI button click → version returned
-    mock_page.evaluate.return_value = json.dumps({"version": "1.0.3"})
-    mock_page.wait_for_response.return_value = MagicMock(
-        json=MagicMock(return_value={"version": "1.0.3", "status": "Published"}),
-    )
 
-    monkeypatch.setattr("aurora.playwright.publish_ui_fallback.sync_playwright", lambda: mock_pw.start.return_value)
+    mock_context = MagicMock()
+    mock_context.new_page.return_value = mock_page
+
+    mock_browser = MagicMock()
+    mock_browser.new_context.return_value = mock_context
+
+    mock_playwright = MagicMock()
+    mock_playwright.chromium.launch.return_value = mock_browser
+
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_playwright)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    mock_sync_pw = MagicMock(return_value=mock_cm)
+
+    # Patch at the source module level since the function imports inside
+    monkeypatch.setattr("playwright.sync_api.sync_playwright", mock_sync_pw)
+
+    # Simulate _on_response callback firing when page.on("response", ...) registers it
+    def _trigger_response_on_on(event: str, handler: object) -> None:
+        if event == "response":
+            mock_resp = MagicMock()
+            mock_resp.url = "https://cloud.uipath.com/studio_/api/publish"
+            mock_resp.request.method = "POST"
+            mock_resp.json.return_value = {"version": "1.0.3", "status": "Published"}
+            handler(mock_resp)
+
+    mock_page.on = MagicMock(side_effect=_trigger_response_on_on)
+
+    from aurora.playwright.publish_ui_fallback import publish_via_ui
 
     result = publish_via_ui(
         project_dir=Path("/tmp/dummy"),
@@ -160,6 +191,7 @@ def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "version" in result
     assert isinstance(result["version"], str)
+    assert result["version"] == "1.0.3"
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +200,7 @@ def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_build_publish_request_pure_helper() -> None:
     """_build_publish_request reads the fixture and returns a dict with
-    url, method, headers, body — no I/O."""
+    url_path, method, headers, body — no I/O."""
     from aurora.uipath_client import _build_publish_request
 
     req = _build_publish_request(
@@ -180,7 +212,7 @@ def test_build_publish_request_pure_helper() -> None:
         version_bump="patch",
     )
     assert req["method"] == "POST"
-    assert "/studio_/api/publish" in req["url"]
+    assert "/studio_/api/publish" in req["url_path"]
     assert req["headers"]["Authorization"] == "Bearer tok"
     assert req["headers"]["X-UIPATH-OrganizationUnitId"] == "42"
     assert req["body"]["projectKey"] == "my-proj"

@@ -11,6 +11,7 @@ to swap SDK versions or add tracing.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shlex
@@ -22,9 +23,15 @@ from datetime import UTC
 from pathlib import Path
 from typing import Any, cast
 
+import httpx
+
 from aurora.auth import ensure_fresh_token
 
 logger = logging.getLogger(__name__)
+
+PUBLISH_FIXTURE_PATH = Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures" / "maestro" / "publish_request.json"
+PUBLISH_MAX_RETRIES = 3
+PUBLISH_RETRY_BASE_DELAY = 1.0  # seconds; doubles each retry
 
 
 @dataclass(frozen=True)
@@ -194,6 +201,73 @@ class UiPathClient:
         users = r.json().get("value", [])
         return users[0]["Id"] if users else None
 
+    # ---------- Maestro publish (reverse-engineered Studio Web API) ----------
+
+    def publish_maestro_project(
+        self,
+        *,
+        project_dir: Path,
+        version_bump: str = "patch",
+        fixture_path: Path | None = None,
+    ) -> dict[str, Any]:
+        """Publish a Maestro project via the reverse-engineered Studio Web HTTP API.
+
+        Reads the captured fixture to learn the URL path and request shape,
+        then replays it with the live OAuth bearer and folder context.
+        Retries on3x on5xx per R.E.02; surfaces=4xx per R.E.03.
+        """
+        fixture = fixture_path or PUBLISH_FIXTURE_PATH
+        access_token = os.environ.get("UIPATH_ACCESS_TOKEN", "")
+        folder_ref = self.resolve_folder()
+        project_key = project_dir.name
+
+        version = _derive_next_version(project_dir, version_bump)
+        req_spec = _build_publish_request(
+            fixture_path=fixture,
+            access_token=access_token,
+            folder_id=folder_ref.id,
+            project_key=project_key,
+            version=version,
+            version_bump=version_bump,
+        )
+
+        base_url = str(self.url).rstrip("/")
+        if base_url.endswith("/orchestrator_"):
+            base_url = base_url[: -len("/orchestrator_")]
+        full_url = f"{base_url}{req_spec['url_path']}"
+
+        logger.info("publishing maestro project: %s", project_dir)
+        last_exc: Exception | None = None
+        for attempt in range(PUBLISH_MAX_RETRIES):
+            try:
+                r = httpx.post(
+                    full_url,
+                    headers=req_spec["headers"],
+                    json=req_spec["body"],
+                    timeout=60,
+                )
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                logger.warning("publish attempt %d network error: %s", attempt + 1, exc)
+                continue
+
+            if r.status_code >= 500:
+                last_exc = RuntimeError(f"HTTP {r.status_code} from publish endpoint")
+                logger.warning("publish attempt %d got %d", attempt + 1, r.status_code)
+                if attempt < PUBLISH_MAX_RETRIES - 1:
+                    import time
+                    time.sleep(PUBLISH_RETRY_BASE_DELAY * (2 ** attempt))
+                continue
+
+            if r.status_code >= 400:
+                raise BusinessException(
+                    f"HTTP {r.status_code} from publish endpoint: {r.text[:200]}"
+                )
+
+            return _parse_publish_response(r.json())
+
+        raise last_exc or RuntimeError("publish failed after retries")
+
     # ---------- uipath CLI shellouts ----------
 
     def uipath_cli(self, *args: str, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -230,3 +304,86 @@ class UiPathClient:
 def _iso_minutes_ago(n: int) -> str:
     from datetime import datetime, timedelta
     return (datetime.now(UTC) - timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class BusinessException(RuntimeError):
+    """Non-retryable business-logic error (4xx from UiPath APIs)."""
+
+
+def _build_publish_request(
+    *,
+    fixture_path: Path,
+    access_token: str,
+    folder_id: int,
+    project_key: str,
+    version: str,
+    version_bump: str,
+) -> dict[str, Any]:
+    """Pure helper: read the captured fixture and build the request spec.
+
+    Returns a dict with keys ``method``, ``url_path``, ``headers``, ``body``.
+    No I/O beyond reading the fixture file.
+    """
+    if not fixture_path.exists():
+        raise FileNotFoundError(f"publish fixture not found: {fixture_path}")
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    template_headers: dict[str, str] = fixture.get("headers", {})
+    template_body: dict[str, Any] = fixture.get("body", {})
+
+    headers: dict[str, str] = {}
+    for key, value in template_headers.items():
+        if "{{UIPATH_ACCESS_TOKEN}}" in value:
+            headers[key] = value.replace("{{UIPATH_ACCESS_TOKEN}}", access_token)
+        elif "{{folder_id}}" in value:
+            headers[key] = value.replace("{{folder_id}}", str(folder_id))
+        else:
+            headers[key] = value
+
+    body = dict(template_body)
+    body["projectKey"] = project_key
+    body["version"] = version
+    body["versionBump"] = version_bump
+
+    return {
+        "method": fixture.get("method", "POST"),
+        "url_path": fixture.get("url_path", "/studio_/api/publish"),
+        "headers": headers,
+        "body": body,
+    }
+
+
+def _parse_publish_response(payload: dict[str, Any]) -> dict[str, Any]:
+    """Pure helper: extract the relevant fields from a publish response."""
+    return {
+        "version": payload.get("version", "unknown"),
+        "status": payload.get("status", "Published"),
+        "projectKey": payload.get("projectKey", ""),
+        "packageId": payload.get("packageId", ""),
+    }
+
+
+def _derive_next_version(project_dir: Path, version_bump: str) -> str:
+    """Derive the next version string from the project's project.json or default."""
+    project_json = project_dir / "project.json"
+    if project_json.exists():
+        try:
+            data = json.loads(project_json.read_text(encoding="utf-8"))
+            current = data.get("version", "1.0.0")
+            return _bump_version(current, version_bump)
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return "1.0.0"
+
+
+def _bump_version(current: str, version_bump: str) -> str:
+    """Bump a semver string by the given bump type (major/minor/patch)."""
+    import re
+    m = re.match(r"(\d+)\.(\d+)\.(\d+)", current)
+    if not m:
+        return current
+    major, minor, patch = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if version_bump == "major":
+        return f"{major + 1}.0.0"
+    if version_bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
