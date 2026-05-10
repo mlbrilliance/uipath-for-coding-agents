@@ -227,7 +227,7 @@ def _cluster_learnings(learnings: list[LearningEntry]) -> list[Cluster]:
     try:
         from aurora.fingerprint import cluster_learnings as fp_cluster  # type: ignore[attr-defined]
     except (ImportError, AttributeError):
-        fp_cluster = None  # type: ignore[assignment]
+        fp_cluster = None
 
     if fp_cluster is not None:
         try:

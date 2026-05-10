@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-AURORA_HOME="${AURORA_HOME:-/opt/aurora}"
+AURORA_HOME="${AURORA_HOME:-${HOME}/.aurora}"
 LOG="${AURORA_HOME}/hooks.log"
 mkdir -p "${AURORA_HOME}"
 

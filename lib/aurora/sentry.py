@@ -14,6 +14,7 @@ import logging
 import os
 import signal
 from datetime import UTC, datetime
+from typing import Any
 
 from aurora.fingerprint import classify_event
 from aurora.memory import MemoryStore
@@ -63,7 +64,7 @@ class Sentry:
     async def _tick(self) -> None:
         # Run synchronous SDK calls in a thread to keep the loop responsive
         loop = asyncio.get_running_loop()
-        failed = await loop.run_in_executor(None, self.client.list_failed_jobs, 5)
+        failed = await loop.run_in_executor(None, lambda: self.client.list_failed_jobs(since_minutes=5))
         for job in failed:
             self._emit_job_fault(job)
 
@@ -80,7 +81,7 @@ class Sentry:
 
     # ---------- emitters ----------
 
-    def _emit(self, event: dict) -> None:
+    def _emit(self, event: dict[str, Any]) -> None:
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, separators=(",", ":")) + "\n")
         # Cluster on the way through so Diagnostician can read fingerprints later
@@ -90,7 +91,7 @@ class Sentry:
             except Exception:
                 logger.exception("sentry: classify_event failed for %s", event.get("kind"))
 
-    def _emit_job_fault(self, job: dict) -> None:
+    def _emit_job_fault(self, job: dict[str, Any]) -> None:
         self._emit({
             "ts": _now_iso(),
             "kind": "job_failed",
@@ -108,7 +109,7 @@ class Sentry:
             },
         })
 
-    def _emit_maestro_fault(self, inst: dict) -> None:
+    def _emit_maestro_fault(self, inst: dict[str, Any]) -> None:
         self._emit({
             "ts": _now_iso(),
             "kind": "maestro_instance_faulted",

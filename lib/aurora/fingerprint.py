@@ -20,6 +20,7 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,11 @@ class ClusterResult:
     size: int
     novel: bool
     confidence: float
-    prior_resolution: dict | None
+    prior_resolution: dict[str, Any] | None
 
 
 def db_path() -> Path:
-    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
     home.mkdir(parents=True, exist_ok=True)
     return home / "fingerprints.db"
 
@@ -90,7 +91,7 @@ def message_skeleton(msg: str) -> str:
     return out[:500]
 
 
-def derive_kind(event: dict) -> str:
+def derive_kind(event: dict[str, Any]) -> str:
     et = (event.get("details", {}).get("exception_type") or "").lower()
     msg = (event.get("details", {}).get("message") or "").lower()
     if "selectornotfound" in et or "selector" in msg:
@@ -133,7 +134,7 @@ def derive_refinement(kind: str, exception_type: str, msg: str) -> str:
     return "generic"
 
 
-def classify_event(event: dict) -> ClusterResult:
+def classify_event(event: dict[str, Any]) -> ClusterResult:
     """Map an event to a fingerprint, update SQLite, return cluster info."""
     details = event.get("details", {})
     kind = event.get("kind") or "novel-fault"
@@ -203,7 +204,7 @@ def append_resolution(*, cluster_id: str, pr: str, summary: str) -> None:
     db.commit()
 
 
-def list_clusters(*, kind: str | None = None, limit: int = 20) -> list[dict]:
+def list_clusters(*, kind: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
     db = conn()
     if kind:
         rows = db.execute(

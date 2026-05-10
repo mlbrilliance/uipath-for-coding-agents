@@ -86,6 +86,13 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 
+# The MCP server's tool decorators (@server.list_tools(), @server.call_tool()) are
+# untyped in mcp<0.10. The decorated functions are correct in our code but mypy
+# (under `strict`) flags them. Narrow the rule rather than disable strict mode.
+[[tool.mypy.overrides]]
+module = "aurora.mcp.server"
+disable_error_code = ["untyped-decorator", "no-untyped-call"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

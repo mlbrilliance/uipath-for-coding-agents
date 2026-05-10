@@ -20,6 +20,7 @@ import os
 import signal
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from aurora.memory import MemoryStore
 from aurora.policy import AuroraPolicy, load_policy
@@ -140,7 +141,7 @@ class Conductor:
         )
 
 
-async def _safe(coro) -> None:
+async def _safe(coro: Any) -> None:
     try:
         await coro
     except Exception:
@@ -154,7 +155,7 @@ async def _spawn_agent(*, agent: str, prompt: str) -> None:
     even if the SDK isn't installed yet (early bootstrap).
     """
     try:
-        from claude_agent_sdk import query  # type: ignore[import-not-found]
+        from claude_agent_sdk import query
     except ImportError:
         logger.warning("claude-agent-sdk not installed; would have invoked agent=%s", agent)
         return

@@ -24,7 +24,7 @@ CANONICAL_KINDS = {
 
 
 def db_path() -> Path:
-    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
     home.mkdir(parents=True, exist_ok=True)
     return home / "fingerprints.db"
 

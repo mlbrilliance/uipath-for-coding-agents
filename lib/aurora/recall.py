@@ -13,6 +13,7 @@ import math
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from aurora.fingerprint import list_clusters
 from aurora.memory import MemorySlice, MemoryStore
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 # Default per-agent recall preferences (mirrors the table in skills/aurora-recall/SKILL.md)
-AGENT_DEFAULTS: dict[str, dict] = {
+AGENT_DEFAULTS: dict[str, dict[str, Any]] = {
     "scout":         {"tiers": [],                "fleet": "discovery"},
     "curator":       {"tiers": ["org"],           "fleet": "discovery"},
     "analyst":       {"tiers": ["org"],           "fleet": "discovery"},
@@ -54,7 +55,7 @@ def recall(
     since: timedelta | None = None,
     limit: int = 10,
     home: Path | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Return ranked memory slices.
 
     Args:

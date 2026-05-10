@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aurora.uipath_client import UiPathClient
 
@@ -34,7 +34,7 @@ class GateResponse:
     decision: str
     approver: str | None
     responded_at: str
-    form_data: dict
+    form_data: dict[str, Any]
     elapsed_seconds: int
     escalated_to: str | None = None
     timed_out: bool = False
@@ -48,7 +48,7 @@ def open_gate(
     *,
     kind: str,
     candidate: str | None = None,
-    context: dict | None = None,
+    context: dict[str, Any] | None = None,
     approvers_env: str = "AURORA_EMERGENCY_APPROVERS",
     timeout_hours: int | None = None,
     on_timeout: str | None = None,
@@ -88,7 +88,10 @@ def open_gate(
         data={"context": context, "candidate": candidate, "kind": kind},
         approver_user_ids=approver_user_ids,
     )
-    task_id = int(task.get("Id") or task.get("id"))
+    task_id_raw = task.get("Id") or task.get("id")
+    if task_id_raw is None:
+        raise GateError(f"FormTask response missing Id/id: {task!r}")
+    task_id = int(task_id_raw)
     started_at = time.time()
     timeout_at = started_at + (timeout_hours * 3600)
     logger.info("opened gate kind=%s task=%s timeout=%dh", kind, task_id, timeout_hours)
@@ -150,18 +153,18 @@ def _handle_timeout(
     )
 
 
-def _load_template(kind: str, template_dir: Path) -> dict:
+def _load_template(kind: str, template_dir: Path) -> dict[str, Any]:
     candidates = [
         template_dir / f"{kind}.json",
         template_dir / f"{kind.replace('_', '-')}.json",
     ]
     for path in candidates:
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     raise GateError(f"no template for kind={kind!r}; looked in {[str(p) for p in candidates]}")
 
 
-def _render_placeholders(obj: Any, context: dict) -> Any:
+def _render_placeholders(obj: Any, context: dict[str, Any]) -> Any:
     if isinstance(obj, str):
         def repl(m: re.Match[str]) -> str:
             key = m.group(1)

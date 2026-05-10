@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-AURORA_HOME="${AURORA_HOME:-/opt/aurora}"
+AURORA_HOME="${AURORA_HOME:-${HOME}/.aurora}"
 LOG="${AURORA_HOME}/hooks.log"
 EVENTS="${AURORA_HOME}/events.jsonl"
 LEARNINGS_DIR="${AURORA_HOME}/learnings"

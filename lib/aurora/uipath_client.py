@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aurora.auth import ensure_fresh_token
 
@@ -65,7 +65,7 @@ class UiPathClient:
         # accept access_token as a constructor param; we use env for portability.)
         os.environ["UIPATH_ACCESS_TOKEN"] = token.access_token
         if self._sdk is None:
-            from uipath.platform import UiPath  # type: ignore
+            from uipath.platform import UiPath
             self._sdk = UiPath()
         return self._sdk
 
@@ -91,7 +91,7 @@ class UiPathClient:
 
     # ---------- Jobs ----------
 
-    def list_failed_jobs(self, *, since_minutes: int = 5) -> list[dict]:
+    def list_failed_jobs(self, *, since_minutes: int = 5) -> list[dict[str, Any]]:
         """Failed jobs in this folder in the last N minutes."""
         with self.folder_context():
             params = {
@@ -99,26 +99,26 @@ class UiPathClient:
                 "$top": 100,
             }
             r = self.sdk.api_client.get("/odata/Jobs", params=params)
-            return r.json().get("value", [])
+            return cast(list[dict[str, Any]], r.json().get("value", []))
 
-    def get_job(self, job_id: int) -> dict:
+    def get_job(self, job_id: int) -> dict[str, Any]:
         with self.folder_context():
-            return self.sdk.api_client.get(f"/odata/Jobs({job_id})").json()
+            return cast(dict[str, Any], self.sdk.api_client.get(f"/odata/Jobs({job_id})").json())
 
     # ---------- Queues ----------
 
-    def list_failed_queue_items(self, queue_name: str, *, since_minutes: int = 60) -> list[dict]:
+    def list_failed_queue_items(self, queue_name: str, *, since_minutes: int = 60) -> list[dict[str, Any]]:
         with self.folder_context():
             params = {
                 "$filter": f"QueueDefinitionName eq '{queue_name}' and Status eq 'Failed'",
                 "$top": 200,
             }
             r = self.sdk.api_client.get("/odata/QueueItems", params=params)
-            return r.json().get("value", [])
+            return cast(list[dict[str, Any]], r.json().get("value", []))
 
     # ---------- Assets ----------
 
-    def get_asset(self, name: str) -> dict:
+    def get_asset(self, name: str) -> dict[str, Any]:
         with self.folder_context():
             return self.sdk.assets.retrieve(name=name)  # type: ignore[no-any-return]
 
@@ -134,10 +134,10 @@ class UiPathClient:
         catalog: str,
         title: str,
         priority: str,
-        form_definition: dict,
-        data: dict,
+        form_definition: dict[str, Any],
+        data: dict[str, Any],
         approver_user_ids: list[int],
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Create a Form Task in Action Center, assigned to the given users."""
         with self.folder_context():
             # Form Tasks live under /odata/Tasks with Type=FormTask
@@ -152,12 +152,12 @@ class UiPathClient:
             }
             r = self.sdk.api_client.post("/odata/Tasks", json=payload)
             r.raise_for_status()
-            return r.json()
+            return cast(dict[str, Any], r.json())
 
-    def get_task(self, task_id: int) -> dict:
+    def get_task(self, task_id: int) -> dict[str, Any]:
         with self.folder_context():
             r = self.sdk.api_client.get(f"/odata/Tasks({task_id})")
-            return r.json()
+            return cast(dict[str, Any], r.json())
 
     # ---------- Maestro instance management ----------
 
@@ -177,7 +177,7 @@ class UiPathClient:
 
     def list_maestro_instances(
         self, *, process: str | None = None, state: str | None = None
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         with self.folder_context():
             params: dict[str, str] = {}
             if process:
@@ -185,7 +185,7 @@ class UiPathClient:
             if state:
                 params["state"] = state
             r = self.sdk.api_client.get("/maestro_/api/instances", params=params)
-            return r.json().get("value", [])
+            return cast(list[dict[str, Any]], r.json().get("value", []))
 
     # ---------- Users (for HITL approver resolution) ----------
 
@@ -196,7 +196,7 @@ class UiPathClient:
 
     # ---------- uipath CLI shellouts ----------
 
-    def uipath_cli(self, *args: str, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
+    def uipath_cli(self, *args: str, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
         """Invoke `uipath` CLI with the live access token in the environment.
 
         `uipath` reads UIPATH_ACCESS_TOKEN from env. We refresh before invoking so

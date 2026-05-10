@@ -157,7 +157,7 @@ def _build_server() -> Any:
         ]
 
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict | None) -> list[TextContent]:
+    async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextContent]:
         arguments = arguments or {}
         result = await _dispatch(name, arguments)
         return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
@@ -165,7 +165,7 @@ def _build_server() -> Any:
     return server
 
 
-async def _dispatch(name: str, args: dict) -> Any:
+async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     """Route the MCP tool call to the in-process implementation."""
     if name == "aurora_recall":
         since = timedelta(days=args["since_days"]) if "since_days" in args else None
@@ -211,7 +211,7 @@ async def _dispatch(name: str, args: dict) -> Any:
 
         from aurora.compost import propose_skill_pr
 
-        home = _Path(_os.environ.get("AURORA_HOME", "/opt/aurora"))
+        home = _Path(_os.environ.get("AURORA_HOME", str(_Path.home() / ".aurora")))
         date = datetime.now(UTC).strftime("%Y-%m-%d")
         learnings_path = home / "learnings" / f"{date}.jsonl"
         results = propose_skill_pr(learnings_path, dry_run=True)
@@ -230,7 +230,7 @@ async def _dispatch(name: str, args: dict) -> Any:
 async def _serve() -> None:
     """Run the MCP server on stdio."""
     try:
-        from mcp.server.stdio import stdio_server  # type: ignore[import-not-found]
+        from mcp.server.stdio import stdio_server
     except ImportError as e:
         raise RuntimeError(
             "mcp.server.stdio not available; install mcp>=0.9 with stdio support"

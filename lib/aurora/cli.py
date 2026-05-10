@@ -165,7 +165,7 @@ def cmd_compost(args: argparse.Namespace) -> int:
 
     from aurora.compost import propose_skill_pr
 
-    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
     date = datetime.now(UTC).strftime("%Y-%m-%d")
     learnings_path = home / "learnings" / f"{date}.jsonl"
 

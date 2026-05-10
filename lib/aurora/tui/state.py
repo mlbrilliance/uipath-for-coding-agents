@@ -51,7 +51,7 @@ class LiveState(BaseModel):
 def _aurora_home(override: Path | None = None) -> Path:
     if override is not None:
         return override
-    return Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    return Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
 
 
 def _tail_jsonl(path: Path, n: int) -> list[dict[str, Any]]:

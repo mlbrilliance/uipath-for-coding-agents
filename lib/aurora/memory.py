@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class Learning:
     project_id: str
     kind: str
     summary: str
-    raw: dict = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ class MemorySlice:
 
 class MemoryStore:
     def __init__(self, home: Path | None = None):
-        self.home = Path(home or os.environ.get("AURORA_HOME", "/opt/aurora"))
+        self.home = Path(home or os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
         self.home.mkdir(parents=True, exist_ok=True)
         (self.home / "projects").mkdir(exist_ok=True)
         (self.home / "org").mkdir(exist_ok=True)
@@ -120,7 +121,7 @@ class MemoryStore:
         kind: str,
         summary: str,
         ts: str | None = None,
-        raw: dict | None = None,
+        raw: dict[str, Any] | None = None,
     ) -> Path:
         ts = ts or datetime.now(UTC).isoformat()
         date = ts.split("T")[0]

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Grid
 
 from aurora.tui.state import LiveState, load_state
@@ -42,7 +43,7 @@ class AuroraStatusApp(App[None]):
     }
     """
 
-    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         ("q", "quit", "quit"),
         ("r", "refresh_now", "refresh"),
     ]
