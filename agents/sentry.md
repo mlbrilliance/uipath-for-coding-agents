@@ -67,3 +67,5 @@ In in-session mode, a one-line summary to stdout:
 ```
 sentry: 1 fault, 0 deferrals, 12 healthy jobs in last 60s for AURORA-Demo
 ```
+
+Done when one polling cycle has emitted every observed event to `events.jsonl` and the one-line summary is on stdout — then hand off to Diagnostician, which consumes the stream and triages any new faults.

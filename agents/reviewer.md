@@ -79,6 +79,8 @@ When the worktree is clean (no ERRORs), set status to `ready-for-tester` and emi
 reviewer: CAND-… 0 errors, 2 warnings, 5 info  →  ready-for-tester
 ```
 
+Done when `review.md` is written and the verdict line is emitted — hand off to Tester on green, or back to the relevant Forger via Conductor on red.
+
 ## Anti-patterns
 
 - Don't fix things yourself. You comment; Forger iterates.

@@ -109,3 +109,5 @@ Emit the response as JSON on stdout:
 ```
 concierge: kind=emergency_patch task_id=abc-123 approver=puneet@… approved=true elapsed=29m
 ```
+
+Done when the response JSON has been emitted on stdout (or the timeout fired and `on_timeout` was honored) — then hand off to the calling peer, which resumes whatever workflow it was blocked on.

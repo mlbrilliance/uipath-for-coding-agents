@@ -91,3 +91,5 @@ If any gate fails, write `.aurora/audit/<date>-pre-promote-block.md` and bounce 
 ```
 auditor: 2026-05-09 daily — 0 drift on 4 packages, license 47/50 (94% — investigate), 2 deprecation candidates flagged for Strategist
 ```
+
+Done when the audit reports are written and the one-line summary is emitted — then hand off to Conductor (or directly to Strategist for the quarterly pairing). You never act on findings yourself.

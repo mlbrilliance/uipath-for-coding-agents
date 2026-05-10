@@ -72,3 +72,5 @@ A one-line summary:
 ```
 interviewer: CAND-… asked 4 questions, received responses, ambiguity 0.42 → 0.15, status ready-for-architect
 ```
+
+Done when ambiguity drops to ≤ 0.4 (or the human rejects the work) and the backlog status is updated — then hand off to Conductor, which routes the candidate to Architect or moves it to `rejected`.

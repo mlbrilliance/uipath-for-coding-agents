@@ -81,3 +81,5 @@ For non-trivial faults (cluster overlap < 0.6 or external dependency suspected),
 ```
 diagnostician: event 2026-05-09T03:42 → fingerprint selector-broken/wnd-aaname-mismatch (cluster 12, conf 0.78)  →  surgeon dispatched
 ```
+
+Done when the triage record is written, the dispatch line is emitted, and the fingerprint has been added to the index — then hand off to Surgeon (or to Conductor for a novel-fault escalation).

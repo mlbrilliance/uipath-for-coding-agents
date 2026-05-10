@@ -68,3 +68,5 @@ A one-line summary on completion:
 ```
 analyst: CAND-… scored 82, ambiguity 0.18 → ready-for-architect
 ```
+
+Done when the PDD and `roi.json` are written, the backlog status is updated, and the one-line summary is emitted — then hand off to Conductor for downstream dispatch.

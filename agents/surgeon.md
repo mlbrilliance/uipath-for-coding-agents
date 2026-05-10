@@ -92,3 +92,5 @@ When HITL fires, route to `concierge` with the proposed PR diff as the form payl
 ```
 surgeon: triage 2026-05-09T03:42 → PR #42 (1 workflow, 1 test, 0 drift) → CI green → redeployed → next-poll healthy. Learning written.
 ```
+
+Done when CI is green, the redeploy has produced a healthy Sentry event, and the learning has been written — then hand off to Auditor (post-fix drift sweep) and back to Conductor for normal scheduling.

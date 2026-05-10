@@ -103,3 +103,5 @@ A one-line summary:
 ```
 architect: CAND-… → Maestro (4 forgers, 3 skills, 12 tests, 2 gates)
 ```
+
+Done when the ADR is committed and the one-line summary is emitted — then hand off to Conductor, which dispatches the listed Forgers and Cartographer in parallel.

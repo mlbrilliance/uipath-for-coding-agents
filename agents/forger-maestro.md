@@ -110,3 +110,5 @@ Decisions live in DMN, not in agent prompts or XAML expressions. Emit `decisions
 ```
 forger-maestro: CAND-… emitted process.bpmn (12 tasks, 3 gateways, 1 boundary timer), 2 DMN tables, bindings, README
 ```
+
+Done when `process.bpmn`, `decisions/*.dmn`, and `bindings.json` validate against their schemas and the one-line summary is emitted — then hand off to Reviewer (BPMN/DMN discipline) and Tester (Maestro instance scenarios).

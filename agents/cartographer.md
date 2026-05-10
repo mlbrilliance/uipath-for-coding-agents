@@ -70,3 +70,5 @@ A one-line summary:
 ```
 cartographer: CAND-… mapped 4 apps, 23 elements, 0 auth blockers, all strict + fallbacked
 ```
+
+Done when `.objects/` and `references.json` are written and the one-line summary is emitted — then hand off to the Forger sub-fleet, which consumes the references at build time.

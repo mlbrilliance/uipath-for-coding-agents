@@ -77,3 +77,5 @@ A one-line summary:
 ```
 strategist: 2026-Q2 report — 3 consolidations, 5 deprecations, 1 re-prioritization, 1 skill promotion
 ```
+
+Done when the strategy report is written and dispatch records exist for each recommendation that needs Auditor / Concierge follow-up — then hand off to Conductor, which schedules the validations and HITL gates.
