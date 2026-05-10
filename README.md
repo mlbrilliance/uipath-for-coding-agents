@@ -52,17 +52,15 @@ channel.
 3. [Live-tenant verification](#live-tenant-verification) — the receipts
 4. [Try it in 5 minutes (no tenant)](#try-it-in-5-minutes-no-tenant)
 5. [Run it live (with a tenant)](#run-it-live-with-a-tenant)
-6. [The 12-minute demo](#the-12-minute-demo)
-7. [Architecture deep-dive](#architecture-deep-dive)
-8. [Repo geometry](#repo-geometry)
-9. [Convention discipline](#convention-discipline) — the 60+ REFramework rules
-10. [Configuration](#configuration)
-11. [What broke or surprised us](#what-broke-or-surprised-us)
-12. [Known limits and future work](#known-limits-and-future-work)
-13. [Built on](#built-on)
-14. [Contributing](#contributing)
-15. [Acknowledgments](#acknowledgments)
-16. [License](#license)
+6. [Architecture deep-dive](#architecture-deep-dive)
+7. [Repo geometry](#repo-geometry)
+8. [Convention discipline](#convention-discipline) — the 60+ REFramework rules
+9. [Configuration](#configuration)
+10. [What broke or surprised us](#what-broke-or-surprised-us)
+11. [Built on](#built-on)
+12. [Contributing](#contributing)
+13. [Acknowledgments](#acknowledgments)
+14. [License](#license)
 
 ---
 
@@ -248,37 +246,8 @@ tunnel for the FastAPI webhook. **No Cloudflare account required** — `cloudfla
 http://localhost:8000` prints a `*.trycloudflare.com` URL anonymously. Recipe in
 [`docs/webhook-deploy.md`](docs/webhook-deploy.md).
 
----
-
-## The 12-minute demo
-
-The demo target is **OSS Supply-Chain Defender** — a Maestro process that monitors a GitHub
-org's lockfiles against NVD, OSV, and the GitHub Advisory Database, triages findings against a
-DMN severity matrix, and ships patches with HITL gates on production-affecting fixes.
-
-The 12-minute walkthrough covers the full lifecycle in one take, with three concurrent timelines
-visible.
-
-| Min   | What you see                                                                                                                                                                                           |
-| :---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0:00  | `aurora start` — swarm boots; 19 agents online; cron registry shows three nightly jobs                                                                                                                 |
-| 1:00  | Slack fixture message → Scout → Curator → Analyst                                                                                                                                                      |
-| 2:00  | Interviewer asks 4 questions in Action Center; human answers                                                                                                                                            |
-| 3:00  | Architect picks Maestro; ADR; Forger sub-fleet starts in parallel worktrees                                                                                                                            |
-| 5:00  | BPMN streams into Studio Web canvas; Reviewer comments; Tester writes 12 cases and links them via Test Manager Select-Automation flow                                                                  |
-| 6:30  | Local validation green; publish to dev via `MaestroService.publish_maestro_project`; auto-promote to test                                                                                              |
-| 7:00  | **HITL gate #1**: production publish — human approves in Action Center                                                                                                                                 |
-| 8:00  | Maestro instance runs; critical finding; Critical sub-process; **HITL gate #2**: emergency patch — human approves; PR opens via `OpenPatchPR`; CI green; webhook unblocks Maestro; auto-merge per DMN |
-| 9:00  | `./break.sh` injects a failure (invalid `GITHUB_TOKEN`); Sentry catches; Diagnostician fingerprints `auth-failed/token-expired`; Surgeon rotates to `GITHUB_TOKEN_FALLBACK`; instance resumes — **no human input** |
-| 10:30 | Strategist proposes consolidation; Auditor's cross-folder check passes; HITL approve                                                                                                                   |
-| 11:30 | Nightly compost step proposes a skill update; PR opens; **HITL — human reviews and merges on stage**                                                                                                  |
-| 12:00 | Summary: 1 build, 1 patch, 1 self-heal, 1 consolidation, 1 skill upgrade — **2 human approvals total**                                                                                                 |
-
-Every step is real. Real Orchestrator API calls. Real GitHub PRs (Octokit-based, idempotent on
-duplicate runs). Real Action Center forms. Real BPMN with DMN. The break/heal moment uses a
-real Credential rotation, not a faked retry.
-
-Full beat-by-beat script: [`docs/demo-script.md`](docs/demo-script.md).
+The full beat-by-beat demo script — boot, Discovery → Build → Operate, the two HITL approvals,
+the self-heal moment — lives at [`docs/demo-script.md`](docs/demo-script.md).
 
 ---
 
@@ -547,27 +516,6 @@ A few highlights:
   but the failure-classification branch never fired on real events. Fixed by switching to
   `.tool_response.isError` and friends, plus three frozen real-shape fixtures
   (`tests/lint/fixtures/hooks/posttooluse_*.json`).
-
----
-
-## Known limits and future work
-
-Honest scope statements:
-
-- **The 12-minute demo video isn't recorded yet.** All other artifacts shipped; the video is
-  the last asset.
-- **F4 / F6 / F7** (full Maestro flow with WaitForCI + Critical sub-process + 12-min demo dress
-  rehearsal) require a Cloudflare trial tunnel and a deployed Maestro process. Code paths are
-  built and unit-tested; live verification is a runbook step.
-- **Maestro publish bridge** (`MaestroService.publish_maestro_project`) currently uses a
-  synthetic captured-request fixture. First live publish requires running
-  `lib/aurora/playwright/capture.py` once interactively to capture the real Studio Web request
-  shape. Documented in [`docs/maestro-publish-bridge.md`](docs/maestro-publish-bridge.md).
-- **Test Manager linkage** uses `/test_/api/v1/` — a documented surface but the exact endpoint
-  shape may rotate. The Playwright UI fallback in `lib/aurora/playwright/test_manager_ui.py` is
-  the rotation insurance.
-- **`uipath-openai-agents`** is pinned to `0.0.10` (the current PyPI version). Upgrade to
-  `0.1.x` once it ships.
 
 ---
 

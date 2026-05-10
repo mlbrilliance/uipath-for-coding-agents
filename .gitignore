@@ -43,3 +43,6 @@ Thumbs.db
 
 # Embedding model cache (downloaded by aurora-fingerprint at runtime)
 local_cache/
+
+# Private internal notes — not for the public README / submission audience
+docs/internal-notes.md
