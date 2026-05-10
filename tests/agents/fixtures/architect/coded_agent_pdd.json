@@ -1,0 +1,15 @@
+{
+  "candidate_id": "CAND-AGENT-002",
+  "process_name": "Vendor Invoice Triage",
+  "actor_types": ["agent"],
+  "trigger": "queue",
+  "needs_ui_automation": false,
+  "needs_reasoning": true,
+  "needs_human_approval": false,
+  "data_volume": "small",
+  "summary": "Single-agent reasoning loop that classifies inbound vendor invoices into GL codes from unstructured PDF text.",
+  "acceptance_criteria": [
+    "≥ 0.95 GL-code accuracy on the eval set",
+    "Falls back to human queue when confidence < 0.7"
+  ]
+}

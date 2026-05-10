@@ -1,0 +1,8 @@
+{
+  "nupkg_path": "dist/AuroraSupplyChainDefender.0.1.0.nupkg",
+  "orchestrator_pkg_id": "pkg_01HZ9X8T1234567890ABCDEFG",
+  "test_manager_link": "https://cloud.uipath.com/aurora/testmanager/projects/42/automations/8",
+  "coverage": 0.92,
+  "tests_total": 14,
+  "tests_green": 14
+}

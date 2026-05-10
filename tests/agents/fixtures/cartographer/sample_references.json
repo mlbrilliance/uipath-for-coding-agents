@@ -1,0 +1,30 @@
+{
+  "app": "AcmeBilling",
+  "selectors": [
+    {
+      "name": "LoginButton",
+      "primary": "<webctrl tag='BUTTON' aaname='Sign in' />",
+      "fallbacks": [
+        "<webctrl tag='BUTTON' id='login-submit' />",
+        "<webctrl tag='BUTTON' parentname='login-form' />"
+      ],
+      "strict": true
+    },
+    {
+      "name": "InvoiceTable",
+      "primary": "<webctrl tag='TABLE' id='invoices-grid' />",
+      "fallbacks": [
+        "<webctrl tag='TABLE' aaname='Invoices' />"
+      ],
+      "strict": true
+    },
+    {
+      "name": "ExportLink",
+      "primary": "<webctrl tag='A' aaname='Export CSV' />",
+      "fallbacks": [
+        "<webctrl tag='A' parentname='invoices-toolbar' aaname='Export CSV' />"
+      ],
+      "strict": true
+    }
+  ]
+}

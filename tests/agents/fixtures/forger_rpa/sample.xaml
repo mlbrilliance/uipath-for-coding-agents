@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity x:Class="GitHub_FetchLockfile"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <x:Members>
+    <x:Property Name="in_strRepoName" Type="InArgument(x:String)" />
+    <x:Property Name="in_strBranch" Type="InArgument(x:String)" />
+    <x:Property Name="out_strLockfilePath" Type="OutArgument(x:String)" />
+    <x:Property Name="io_dictConfig" Type="InOutArgument(scg:Dictionary(x:String, x:Object))" />
+  </x:Members>
+
+  <Sequence DisplayName="GitHub_FetchLockfile">
+    <ui:LogMessage Level="Info" Message="Starting GitHub_FetchLockfile" />
+
+    <TryCatch DisplayName="External: fetch lockfile">
+      <TryCatch.Try>
+        <Sequence>
+          <ui:HttpClient Endpoint="[in_dictConfig(&quot;LockfileUrl&quot;).ToString()]" />
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="s:Exception">
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ui:LogMessage Level="Error" Message="lockfile fetch failed" />
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+
+    <ui:LogMessage Level="Info" Message="Completed GitHub_FetchLockfile" />
+  </Sequence>
+</Activity>
