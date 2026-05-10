@@ -64,6 +64,13 @@ def mock_maestro() -> MaestroMock:
     return MaestroMock()
 
 
+@pytest.fixture(autouse=True)
+def _reset_dedup() -> None:
+    """Clear the in-memory dedup LRU before each test to avoid cross-test pollution."""
+    from app import _seen
+    _seen.clear()
+
+
 @pytest.fixture
 def client(
     secret: str,
