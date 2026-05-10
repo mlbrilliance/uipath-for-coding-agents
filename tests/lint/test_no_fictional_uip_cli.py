@@ -27,6 +27,8 @@ EXCLUDED_PATHS = {
     # The submission post explicitly narrates the `uip → uipath` rename
     # for the reviewer's benefit.
     "docs/submission-post.md",
+    # The claims file mirrors the same narrative claim.
+    "docs/submission-claims.json",
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "local_cache", ".pytest_cache", "node_modules"}

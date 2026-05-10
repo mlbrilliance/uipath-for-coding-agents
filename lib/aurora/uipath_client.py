@@ -66,61 +66,104 @@ class UiPathClient:
     @property
     def sdk(self) -> Any:
         """Lazily-initialised uipath SDK. Refreshes the token before each access
-        if the cached one is stale."""
+        if the cached one is stale.
+
+        NOTE: We mostly bypass `sdk.api_client` for raw OData/Maestro/Tasks
+        calls because its built-in `request()` method does scoped URL
+        rewriting that mangles `/odata/...` paths (and individual typed
+        services like `sdk.folders` route through `/api/...` endpoints
+        that need higher OAuth scopes than our `OR.*` set). The SDK is
+        kept for typed services that DO use the same OData surface, like
+        `sdk.assets.*` and `sdk.tasks.*`, but most network calls in this
+        wrapper go through `_http` directly.
+        """
         token = ensure_fresh_token(write_dotenv_path=self.dotenv_path)
-        # Mutate environment so the SDK picks it up. (Some uipath versions
-        # accept access_token as a constructor param; we use env for portability.)
         os.environ["UIPATH_ACCESS_TOKEN"] = token.access_token
         if self._sdk is None:
             from uipath.platform import UiPath
             self._sdk = UiPath()
         return self._sdk
 
+    @property
+    def _http(self) -> httpx.Client:
+        """Bearer-authenticated httpx client rooted at UIPATH_URL.
+
+        This is the path through to OData/Maestro/Tasks endpoints that
+        works with our OR.* scope set (verified by the F2 live probe
+        HEAD /odata/Folders → 200). One client per folder_context call;
+        caller is responsible for closing.
+        """
+        token = ensure_fresh_token(write_dotenv_path=self.dotenv_path)
+        os.environ["UIPATH_ACCESS_TOKEN"] = token.access_token
+        assert self.url is not None  # guaranteed by __init__
+        return httpx.Client(
+            base_url=self.url.rstrip("/"),
+            headers={
+                "Authorization": f"Bearer {token.access_token}",
+                "Content-Type": "application/json",
+            },
+            timeout=30.0,
+        )
+
     # ---------- Folders ----------
 
     def resolve_folder(self) -> FolderRef:
         """Return the FolderRef for self.folder. Raises if not found."""
-        for f in self.sdk.api_client.get("/odata/Folders").json().get("value", []):
-            if f.get("DisplayName") == self.folder or f.get("FullyQualifiedName") == self.folder:
-                return FolderRef(name=f["DisplayName"], id=f["Id"])
+        with self._http as client:
+            r = client.get("/odata/Folders")
+            r.raise_for_status()
+            for f in r.json().get("value", []):
+                if f.get("DisplayName") == self.folder or f.get("FullyQualifiedName") == self.folder:
+                    return FolderRef(name=f["DisplayName"], id=f["Id"])
         raise RuntimeError(f"folder not found: {self.folder!r}")
 
     @contextmanager
     def folder_context(self) -> Iterator[FolderRef]:
-        """Set X-UIPATH-OrganizationUnitId header for the duration of the block."""
+        """Resolve the folder ref. Per-request callers can pass
+        `X-UIPATH-OrganizationUnitId: str(ref.id)` to scope the call.
+        """
         ref = self.resolve_folder()
-        # Many SDK calls accept folder via header — set on the client.
-        self.sdk.api_client.headers["X-UIPATH-OrganizationUnitId"] = str(ref.id)
-        try:
-            yield ref
-        finally:
-            self.sdk.api_client.headers.pop("X-UIPATH-OrganizationUnitId", None)
+        yield ref
+
+    def _http_with_folder(self, ref: FolderRef) -> httpx.Client:
+        """Bearer-auth client with the folder header set."""
+        client = self._http
+        client.headers["X-UIPATH-OrganizationUnitId"] = str(ref.id)
+        return client
 
     # ---------- Jobs ----------
 
     def list_failed_jobs(self, *, since_minutes: int = 5) -> list[dict[str, Any]]:
         """Failed jobs in this folder in the last N minutes."""
-        with self.folder_context():
-            params = {
-                "$filter": f"State eq 'Faulted' and CreationTime ge {_iso_minutes_ago(since_minutes)}",
-                "$top": 100,
-            }
-            r = self.sdk.api_client.get("/odata/Jobs", params=params)
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get(
+                "/odata/Jobs",
+                params={
+                    "$filter": f"State eq 'Faulted' and CreationTime ge {_iso_minutes_ago(since_minutes)}",
+                    "$top": 100,
+                },
+            )
+            r.raise_for_status()
             return cast(list[dict[str, Any]], r.json().get("value", []))
 
     def get_job(self, job_id: int) -> dict[str, Any]:
-        with self.folder_context():
-            return cast(dict[str, Any], self.sdk.api_client.get(f"/odata/Jobs({job_id})").json())
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get(f"/odata/Jobs({job_id})")
+            r.raise_for_status()
+            return cast(dict[str, Any], r.json())
 
     # ---------- Queues ----------
 
     def list_failed_queue_items(self, queue_name: str, *, since_minutes: int = 60) -> list[dict[str, Any]]:
-        with self.folder_context():
-            params = {
-                "$filter": f"QueueDefinitionName eq '{queue_name}' and Status eq 'Failed'",
-                "$top": 200,
-            }
-            r = self.sdk.api_client.get("/odata/QueueItems", params=params)
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get(
+                "/odata/QueueItems",
+                params={
+                    "$filter": f"QueueDefinitionName eq '{queue_name}' and Status eq 'Failed'",
+                    "$top": 200,
+                },
+            )
+            r.raise_for_status()
             return cast(list[dict[str, Any]], r.json().get("value", []))
 
     # ---------- Assets ----------
@@ -146,8 +189,7 @@ class UiPathClient:
         approver_user_ids: list[int],
     ) -> dict[str, Any]:
         """Create a Form Task in Action Center, assigned to the given users."""
-        with self.folder_context():
-            # Form Tasks live under /odata/Tasks with Type=FormTask
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
             payload = {
                 "Type": "FormTask",
                 "Title": title,
@@ -157,49 +199,49 @@ class UiPathClient:
                 "Data": data,
                 "AssignedToUsers": [{"Id": uid} for uid in approver_user_ids],
             }
-            r = self.sdk.api_client.post("/odata/Tasks", json=payload)
+            r = client.post("/odata/Tasks", json=payload)
             r.raise_for_status()
             return cast(dict[str, Any], r.json())
 
     def get_task(self, task_id: int) -> dict[str, Any]:
-        with self.folder_context():
-            r = self.sdk.api_client.get(f"/odata/Tasks({task_id})")
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.get(f"/odata/Tasks({task_id})")
+            r.raise_for_status()
             return cast(dict[str, Any], r.json())
 
     # ---------- Maestro instance management ----------
 
     def pause_maestro_instance(self, instance_id: str) -> None:
-        with self.folder_context():
-            r = self.sdk.api_client.post(
-                f"/maestro_/api/instances/{instance_id}/pause"
-            )
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.post(f"/maestro_/api/instances/{instance_id}/pause")
             r.raise_for_status()
 
     def resume_maestro_instance(self, instance_id: str) -> None:
-        with self.folder_context():
-            r = self.sdk.api_client.post(
-                f"/maestro_/api/instances/{instance_id}/resume"
-            )
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
+            r = client.post(f"/maestro_/api/instances/{instance_id}/resume")
             r.raise_for_status()
 
     def list_maestro_instances(
         self, *, process: str | None = None, state: str | None = None
     ) -> list[dict[str, Any]]:
-        with self.folder_context():
+        with self.folder_context() as ref, self._http_with_folder(ref) as client:
             params: dict[str, str] = {}
             if process:
                 params["process"] = process
             if state:
                 params["state"] = state
-            r = self.sdk.api_client.get("/maestro_/api/instances", params=params)
+            r = client.get("/maestro_/api/instances", params=params)
+            r.raise_for_status()
             return cast(list[dict[str, Any]], r.json().get("value", []))
 
     # ---------- Users (for HITL approver resolution) ----------
 
     def find_user_id(self, email: str) -> int | None:
-        r = self.sdk.api_client.get("/odata/Users", params={"$filter": f"EmailAddress eq '{email}'"})
-        users = r.json().get("value", [])
-        return users[0]["Id"] if users else None
+        with self._http as client:
+            r = client.get("/odata/Users", params={"$filter": f"EmailAddress eq '{email}'"})
+            r.raise_for_status()
+            users = r.json().get("value", [])
+            return users[0]["Id"] if users else None
 
     # ---------- Maestro publish (reverse-engineered Studio Web API) ----------
 
