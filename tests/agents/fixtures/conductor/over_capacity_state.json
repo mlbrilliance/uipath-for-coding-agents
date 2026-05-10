@@ -1,0 +1,24 @@
+{
+  "_doc": "Fleet state where every worktree slot in the pool is already taken. The planner must not spawn additional worktrees; it must defer new dispatches into `queued`. The number of active worktrees here is intentionally `>=` policy.yaml::worktree_pool.max_concurrent (default 4) so the test stays correct if the cap is later raised — only candidates that *need* a worktree are queued.",
+  "agents": [
+    {"name": "scout", "busy": false, "current_worktree": null},
+    {"name": "curator", "busy": false, "current_worktree": null},
+    {"name": "analyst", "busy": false, "current_worktree": null},
+    {"name": "interviewer", "busy": false, "current_worktree": null},
+    {"name": "strategist", "busy": false, "current_worktree": null},
+    {"name": "architect", "busy": false, "current_worktree": null},
+    {"name": "cartographer", "busy": false, "current_worktree": null},
+    {"name": "forger-rpa", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-201/"},
+    {"name": "forger-coded", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-202/"},
+    {"name": "forger-agent", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-203/"},
+    {"name": "forger-maestro", "busy": true, "current_worktree": "${AURORA_WORKTREE_DIR}/J-204/"},
+    {"name": "reviewer", "busy": false, "current_worktree": null},
+    {"name": "tester", "busy": false, "current_worktree": null},
+    {"name": "sentry", "busy": true, "current_worktree": null},
+    {"name": "diagnostician", "busy": false, "current_worktree": null},
+    {"name": "surgeon", "busy": false, "current_worktree": null},
+    {"name": "auditor", "busy": false, "current_worktree": null},
+    {"name": "concierge", "busy": false, "current_worktree": null},
+    {"name": "conductor", "busy": true, "current_worktree": null}
+  ]
+}
