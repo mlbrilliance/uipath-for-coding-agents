@@ -18,13 +18,10 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import structlog
-from agents import Agent, function_tool
-
 from models import (
-    Lockfile,
     LockfileEntry,
     MaintainerHealthInput,
     MaintainerHealthReport,
@@ -32,6 +29,8 @@ from models import (
 )
 from tools.commit_recency import CommitRecencyResult, get_commit_recency
 from tools.scorecard import ScorecardResult, get_scorecard
+
+from agents import Agent, function_tool
 
 logger = structlog.get_logger(__name__)
 
@@ -41,8 +40,8 @@ PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "triage.md"
 # ---------- Pure helpers (Tester targets these) ----------
 
 def _flag_thresholds(
-    scorecard_score: Optional[float],
-    commit_recency_days: Optional[int],
+    scorecard_score: float | None,
+    commit_recency_days: int | None,
 ) -> list[str]:
     """Derive risk flags from raw signal values.
 
@@ -62,8 +61,8 @@ def _flag_thresholds(
 
 
 def _health_score(
-    scorecard_score: Optional[float],
-    commit_recency_days: Optional[int],
+    scorecard_score: float | None,
+    commit_recency_days: int | None,
 ) -> float:
     """Combine scorecard + recency into a 0-10 health score."""
     base = 5.0 if scorecard_score is None else float(scorecard_score)

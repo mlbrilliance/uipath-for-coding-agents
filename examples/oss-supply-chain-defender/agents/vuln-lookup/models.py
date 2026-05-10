@@ -6,8 +6,6 @@ don't rename without coordinating with Forger-Maestro.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -38,11 +36,11 @@ class Finding(BaseModel):
     depth: int = 1
     advisory_id: str = Field(..., description="CVE-YYYY-NNNN, GHSA-..., OSV-...")
     title: str = ""
-    cvss: Optional[float] = None
+    cvss: float | None = None
     exploit_in_wild: bool = False
-    fix_version: Optional[str] = None
+    fix_version: str | None = None
     source: str = Field(..., description="nvd | osv | github-advisory")
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class TriageInput(BaseModel):
@@ -54,9 +52,9 @@ class RemediationDiff(BaseModel):
     """Concrete diff proposal for the auto-PR step."""
     files: list[dict] = Field(default_factory=list, description="[{path, before, after}]")
     files_touched: int = 0
-    url: Optional[str] = None  # set after the PR is opened
+    url: str | None = None  # set after the PR is opened
 
 
 class TriageResult(BaseModel):
     triage_summary: str = ""
-    proposed_diff: Optional[RemediationDiff] = None
+    proposed_diff: RemediationDiff | None = None

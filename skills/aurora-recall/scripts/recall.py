@@ -46,7 +46,7 @@ def main() -> int:
 
     _add_lib_to_path()
     try:
-        from aurora.recall import recall  # noqa: WPS433
+        from aurora.recall import recall
     except ImportError as e:
         # Hook expects empty context on failure — exit 0 with empty result
         sys.stderr.write(f"[aurora-recall] aurora package not importable: {e}\n")
@@ -63,7 +63,7 @@ def main() -> int:
             limit=args.limit,
             since=_parse_duration(args.since),
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         sys.stderr.write(f"[aurora-recall] error: {e}\n")
         print("{}")
         return 0

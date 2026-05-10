@@ -14,7 +14,6 @@ import os
 
 import pytest
 
-
 pytestmark = pytest.mark.skipif(
     os.environ.get("AURORA_INTEGRATION") != "1",
     reason="set AURORA_INTEGRATION=1 to run live compost PR test",

@@ -15,12 +15,12 @@ import logging
 import os
 import shlex
 import subprocess
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
-from typing import Any, Iterator, Optional
-
-import httpx
+from typing import Any
 
 from aurora.auth import ensure_fresh_token
 
@@ -43,9 +43,9 @@ class UiPathClient:
     def __init__(
         self,
         *,
-        url: Optional[str] = None,
-        folder: Optional[str] = None,
-        dotenv_path: Optional[Path] = None,
+        url: str | None = None,
+        folder: str | None = None,
+        dotenv_path: Path | None = None,
     ):
         self.url = url or os.environ.get("UIPATH_URL")
         self.folder = folder or os.environ.get("UIPATH_FOLDER")
@@ -176,7 +176,7 @@ class UiPathClient:
             r.raise_for_status()
 
     def list_maestro_instances(
-        self, *, process: Optional[str] = None, state: Optional[str] = None
+        self, *, process: str | None = None, state: str | None = None
     ) -> list[dict]:
         with self.folder_context():
             params: dict[str, str] = {}
@@ -189,14 +189,14 @@ class UiPathClient:
 
     # ---------- Users (for HITL approver resolution) ----------
 
-    def find_user_id(self, email: str) -> Optional[int]:
+    def find_user_id(self, email: str) -> int | None:
         r = self.sdk.api_client.get("/odata/Users", params={"$filter": f"EmailAddress eq '{email}'"})
         users = r.json().get("value", [])
         return users[0]["Id"] if users else None
 
     # ---------- uipath CLI shellouts ----------
 
-    def uipath_cli(self, *args: str, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess:
+    def uipath_cli(self, *args: str, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
         """Invoke `uipath` CLI with the live access token in the environment.
 
         `uipath` reads UIPATH_ACCESS_TOKEN from env. We refresh before invoking so
@@ -208,7 +208,7 @@ class UiPathClient:
         ensure_fresh_token(write_dotenv_path=self.dotenv_path)
         cmd = ["uipath", *args]
         logger.info("running: %s", shlex.join(cmd))
-        return subprocess.run(  # noqa: S603
+        return subprocess.run(
             cmd,
             cwd=str(cwd) if cwd else None,
             check=check,
@@ -217,7 +217,7 @@ class UiPathClient:
             env=os.environ.copy(),
         )
 
-    def publish(self, project_dir: Path, *, folder: Optional[str] = None) -> str:
+    def publish(self, project_dir: Path, *, folder: str | None = None) -> str:
         """Pack and publish a project. Returns the package version published."""
         self.uipath_cli("pack", cwd=project_dir)
         args = ["publish"]
@@ -228,5 +228,5 @@ class UiPathClient:
 
 
 def _iso_minutes_ago(n: int) -> str:
-    from datetime import datetime, timedelta, timezone
-    return (datetime.now(timezone.utc) - timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from datetime import datetime, timedelta
+    return (datetime.now(UTC) - timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -19,13 +19,13 @@ import json
 import logging
 import os
 import sys
-from datetime import timedelta
+from datetime import UTC, timedelta
 from pathlib import Path
-from typing import Optional
 
 from aurora import __version__
 from aurora.auth import ensure_fresh_token
-from aurora.policy import find_repo_root, load_policy, dry_run as policy_dry_run, PolicyError
+from aurora.policy import PolicyError, find_repo_root, load_policy
+from aurora.policy import dry_run as policy_dry_run
 from aurora.recall import recall as recall_fn
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def _parse_duration(s: str) -> timedelta:
 def cmd_start(args: argparse.Namespace) -> int:
     print("[aurora] loading policy…", flush=True)
     try:
-        policy, warnings = load_policy(path=Path(args.policy) if args.policy else None)
+        _policy, warnings = load_policy(path=Path(args.policy) if args.policy else None)
     except PolicyError as e:
         print(f"[aurora] policy invalid: {e}", file=sys.stderr)
         return 1
@@ -161,12 +161,12 @@ def cmd_restart(_: argparse.Namespace) -> int:
 # ---------- compost ----------
 
 def cmd_compost(args: argparse.Namespace) -> int:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aurora.compost import propose_skill_pr
 
     home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
-    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date = datetime.now(UTC).strftime("%Y-%m-%d")
     learnings_path = home / "learnings" / f"{date}.jsonl"
 
     results = propose_skill_pr(learnings_path, dry_run=bool(args.dry_run))

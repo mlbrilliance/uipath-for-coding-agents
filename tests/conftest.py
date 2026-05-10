@@ -10,13 +10,11 @@ Conventions:
 """
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
 
 import pytest
-
 
 # Ensure lib/ is importable when running pytest from the repo root
 ROOT = Path(__file__).resolve().parent.parent

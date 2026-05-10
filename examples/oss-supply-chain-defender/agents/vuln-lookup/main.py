@@ -10,14 +10,11 @@ live in tools/. Prompts live in prompts/.
 """
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import structlog
-from uipath import UiPath  # type: ignore[import-not-found]
-
 from graph import build_graph
-from models import Finding, LockfileBatch, TriageResult, TriageInput
+from models import Finding, LockfileBatch, TriageInput, TriageResult
 
 logger = structlog.get_logger(__name__)
 
@@ -63,7 +60,6 @@ def triage(input: dict[str, Any]) -> dict[str, Any]:
     """Deep triage of one or more findings; proposes a concrete remediation."""
     payload = TriageInput.model_validate(input)
 
-    sdk = UiPath()  # subscription-OAuth via ~/.claude/credentials.json
     # Surface findings to the LLM via the same graph but with a 'triage' entry mode
     graph = build_graph(mode="triage")
     state = {

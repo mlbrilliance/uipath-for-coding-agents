@@ -7,10 +7,7 @@ Forger-Maestro.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
-
 
 # ---------- Inputs ----------
 # We redefine LockfileEntry/Lockfile inline rather than importing from the
@@ -44,11 +41,11 @@ class PackageHealth(BaseModel):
     ecosystem: str
     name: str
     version: str
-    scorecard_score: Optional[float] = Field(
+    scorecard_score: float | None = Field(
         default=None,
         description="OpenSSF Scorecard aggregate score (0-10). None if API has no data.",
     )
-    commit_recency_days: Optional[int] = Field(
+    commit_recency_days: int | None = Field(
         default=None,
         description="Days since the most recent commit on the default branch. None if unknown.",
     )

@@ -9,7 +9,6 @@ per-check thresholds later.
 """
 from __future__ import annotations
 
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
@@ -25,11 +24,11 @@ SCORECARD_BASE = "https://api.securityscorecards.dev/projects"
 class ScorecardResult(BaseModel):
     """Subset of the Scorecard API response we care about."""
     repo_url: str
-    score: Optional[float] = None
+    score: float | None = None
     found: bool = False
 
 
-def _parse_repo(repo_url: str) -> Optional[tuple[str, str, str]]:
+def _parse_repo(repo_url: str) -> tuple[str, str, str] | None:
     """Extract (platform, org, repo) from a GitHub-style URL.
 
     Returns None for URLs we can't shape into Scorecard's API path.

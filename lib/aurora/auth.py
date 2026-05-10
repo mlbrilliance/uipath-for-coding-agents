@@ -20,7 +20,6 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -64,12 +63,12 @@ def derive_identity_endpoint(uipath_url: str) -> str:
 
 def mint_token(
     *,
-    client_id: Optional[str] = None,
-    client_secret: Optional[str] = None,
-    uipath_url: Optional[str] = None,
-    scopes: Optional[str] = None,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+    uipath_url: str | None = None,
+    scopes: str | None = None,
     write_sidecar: bool = True,
-    write_dotenv_path: Optional[Path] = None,
+    write_dotenv_path: Path | None = None,
 ) -> Token:
     """Mint a fresh access token.
 
@@ -140,7 +139,7 @@ def write_sidecar_file(token: Token) -> None:
     SIDECAR_PATH.chmod(0o600)
 
 
-def get_cached_token() -> Optional[Token]:
+def get_cached_token() -> Token | None:
     """Read the sidecar file. Returns None if missing or unreadable."""
     if not SIDECAR_PATH.exists():
         return None
@@ -158,7 +157,7 @@ def get_cached_token() -> Optional[Token]:
 
 def ensure_fresh_token(
     *,
-    write_dotenv_path: Optional[Path] = None,
+    write_dotenv_path: Path | None = None,
 ) -> Token:
     """Return a token that's not within TOKEN_BUFFER_SECONDS of expiry.
 

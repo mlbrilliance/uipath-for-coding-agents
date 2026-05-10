@@ -83,7 +83,7 @@ AGENT_IDS = [_agent_id(p) for p in AGENT_FILES]
 
 
 # --------------------------------------------------------------------------- #
-# Test 1 — banned regexes (one parametrised case per agent × pattern pair)
+# Test 1 - banned regexes (one parametrised case per agent x pattern pair)
 # --------------------------------------------------------------------------- #
 
 

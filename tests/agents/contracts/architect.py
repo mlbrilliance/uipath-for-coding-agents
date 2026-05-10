@@ -13,13 +13,13 @@ Discipline cited:
 """
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class Pattern(str, Enum):
+class Pattern(StrEnum):
     """Pattern names the Architect is allowed to pick.
 
     Mirrors the rubric in `agents/architect.md` — adding a new pattern

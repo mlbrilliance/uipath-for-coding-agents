@@ -11,12 +11,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from models import Finding, LockfileEntry
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +84,7 @@ async def lookup(dep: LockfileEntry) -> list[Finding]:
     return findings
 
 
-def _extract_max_cvss(cve: dict) -> Optional[float]:
+def _extract_max_cvss(cve: dict) -> float | None:
     metrics = cve.get("metrics", {})
     scores: list[float] = []
     for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):

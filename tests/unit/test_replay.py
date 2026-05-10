@@ -11,11 +11,9 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
-
 from aurora import replay
 from aurora.mcp import server as mcp_server
-
+from pydantic import ValidationError
 
 # ---------- _compare_paths ----------
 

@@ -33,9 +33,10 @@ import logging
 import os
 import subprocess
 from collections import defaultdict
-from datetime import datetime, timezone
+from collections.abc import Callable, Iterable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -55,7 +56,7 @@ class LearningEntry(BaseModel):
     Tolerant of optional fields — older entries may lack `skill` or `context`.
     """
 
-    id: Optional[str] = None
+    id: str | None = None
     timestamp: str = Field(default="")
     agent: str = ""
     skill: str = ""
@@ -110,9 +111,9 @@ def propose_skill_pr(
     threshold_occurrences: int = 3,
     threshold_projects: int = 2,
     dry_run: bool = False,
-    open_gate: Optional[Callable[..., Any]] = None,
-    run_subprocess: Optional[Callable[..., subprocess.CompletedProcess[str]]] = None,
-    diff_provider: Optional[Callable[[Cluster], str]] = None,
+    open_gate: Callable[..., Any] | None = None,
+    run_subprocess: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    diff_provider: Callable[[Cluster], str] | None = None,
 ) -> list[PrResult]:
     """Run the compost loop over a learnings JSONL file.
 
@@ -217,7 +218,7 @@ def _load_learnings(path: Path) -> Iterable[LearningEntry]:
                 k: v for k, v in record.items()
                 if k in LearningEntry.model_fields
             })
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("compost: invalid learning record (%s): %s", e, record)
 
 
@@ -231,7 +232,7 @@ def _cluster_learnings(learnings: list[LearningEntry]) -> list[Cluster]:
     if fp_cluster is not None:
         try:
             return list(fp_cluster(learnings))
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning("compost: fingerprint.cluster_learnings raised; using fallback", exc_info=True)
 
     return _fallback_cluster(learnings)
@@ -346,7 +347,7 @@ def _placeholder_diff(cluster: Cluster) -> str:
 
 def _branch_name(cluster: Cluster) -> str:
     """Stable branch name per cluster + day."""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     safe = cluster.cluster_id.replace("::", "-").replace("/", "-")
     return f"compost/{today}/{safe}"
 

@@ -58,5 +58,5 @@ def test_uses_log_information_not_print() -> None:
 
 
 def test_assert_namespace_rejects_two_segments() -> None:
-    with pytest.raises(AssertionError, match="R.N.04"):
+    with pytest.raises(AssertionError, match=r"R\.N\.04"):
         assert_namespace("namespace Foo.Bar { }")

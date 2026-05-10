@@ -18,10 +18,8 @@ import asyncio
 import logging
 import os
 import signal
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from aurora.memory import MemoryStore
 from aurora.policy import AuroraPolicy, load_policy
@@ -36,7 +34,7 @@ class CronJob:
     hour: int
     minute: int
     func: str  # name of an async coroutine on Conductor
-    last_run: Optional[datetime] = None
+    last_run: datetime | None = None
 
 
 class Conductor:
@@ -49,11 +47,12 @@ class Conductor:
       - daily token-budget tracking
     """
 
-    def __init__(self, *, policy: Optional[AuroraPolicy] = None):
+    def __init__(self, *, policy: AuroraPolicy | None = None):
         self.policy: AuroraPolicy = policy or load_policy()[0]
         self.store = MemoryStore()
         self.sentry = Sentry()
         self._stop = asyncio.Event()
+        self._tasks: set[asyncio.Task[None]] = set()
         self.crons: list[CronJob] = [
             CronJob(name="auditor_daily",   hour=2, minute=0,  func="run_auditor"),
             CronJob(name="strategist_nightly", hour=2, minute=30, func="run_strategist"),
@@ -80,7 +79,7 @@ class Conductor:
 
     async def _cron_loop(self) -> None:
         while not self._stop.is_set():
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             for job in self.crons:
                 if (
                     now.hour == job.hour
@@ -93,10 +92,12 @@ class Conductor:
                         logger.warning("cron: no method %s on Conductor", job.func)
                         continue
                     logger.info("cron: dispatching %s", job.name)
-                    asyncio.create_task(_safe(func()))
+                    task = asyncio.create_task(_safe(func()))
+                    self._tasks.add(task)
+                    task.add_done_callback(self._tasks.discard)
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=60)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     # ---------- cron handlers ----------
@@ -121,7 +122,7 @@ class Conductor:
                 "Run the nightly retrospective. Read org memory, the scored backlog, deployed-bot "
                 "inventory, and last 90 days of execution telemetry. Recommend consolidations, "
                 "deprecations, re-prioritizations, and skill-investment candidates. "
-                f"Write `.aurora/strategy/{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.md`."
+                f"Write `.aurora/strategy/{datetime.now(UTC).strftime('%Y-%m-%d')}.md`."
             ),
         )
 
@@ -142,7 +143,7 @@ class Conductor:
 async def _safe(coro) -> None:
     try:
         await coro
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("cron task failed")
 
 

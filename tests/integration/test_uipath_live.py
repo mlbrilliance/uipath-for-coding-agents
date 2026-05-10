@@ -13,10 +13,8 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from aurora import auth
 from aurora.uipath_client import UiPathClient
-
 
 pytestmark = pytest.mark.integration
 

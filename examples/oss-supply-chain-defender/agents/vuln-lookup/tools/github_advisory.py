@@ -10,9 +10,8 @@ import logging
 import os
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from models import Finding, LockfileEntry
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ def _resolve_token() -> str | None:
         asset = sdk.assets.retrieve(name="GitHubToken")
         if asset and asset.get("Value"):
             return asset["Value"]
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     return os.environ.get("GITHUB_TOKEN")
 

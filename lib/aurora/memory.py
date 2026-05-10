@@ -20,10 +20,10 @@ import json
 import logging
 import os
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Iterator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +43,12 @@ class MemorySlice:
     path: str
     snippet: str
     score: float = 0.0
-    ts: Optional[str] = None
+    ts: str | None = None
     tier: str = ""
 
 
 class MemoryStore:
-    def __init__(self, home: Optional[Path] = None):
+    def __init__(self, home: Path | None = None):
         self.home = Path(home or os.environ.get("AURORA_HOME", "/opt/aurora"))
         self.home.mkdir(parents=True, exist_ok=True)
         (self.home / "projects").mkdir(exist_ok=True)
@@ -67,7 +67,7 @@ class MemoryStore:
         d.mkdir(parents=True, exist_ok=True)
         return d
 
-    def read_project_artifact(self, project_id: str, name: str) -> Optional[str]:
+    def read_project_artifact(self, project_id: str, name: str) -> str | None:
         p = self.project_dir(project_id) / name
         return p.read_text(encoding="utf-8") if p.exists() else None
 
@@ -78,7 +78,7 @@ class MemoryStore:
 
     # ---------- org tier ----------
 
-    def read_org_doc(self, name: str) -> Optional[str]:
+    def read_org_doc(self, name: str) -> str | None:
         p = self.home / "org" / name
         return p.read_text(encoding="utf-8") if p.exists() else None
 
@@ -87,7 +87,7 @@ class MemoryStore:
         with p.open("a", encoding="utf-8") as f:
             f.write(line.rstrip("\n") + "\n")
 
-    def search_org(self, query: str, *, limit: int = 10, fleet: Optional[str] = None) -> list[MemorySlice]:
+    def search_org(self, query: str, *, limit: int = 10, fleet: str | None = None) -> list[MemorySlice]:
         """Naive grep + TF-IDF-ish relevance over org markdown files."""
         terms = [t for t in re.findall(r"\w{3,}", query.lower())]
         results: list[MemorySlice] = []
@@ -119,10 +119,10 @@ class MemoryStore:
         project_id: str,
         kind: str,
         summary: str,
-        ts: Optional[str] = None,
-        raw: Optional[dict] = None,
+        ts: str | None = None,
+        raw: dict | None = None,
     ) -> Path:
-        ts = ts or datetime.now(timezone.utc).isoformat()
+        ts = ts or datetime.now(UTC).isoformat()
         date = ts.split("T")[0]
         path = self.home / "learnings" / f"{date}.jsonl"
         record = {
@@ -137,10 +137,10 @@ class MemoryStore:
             f.write(json.dumps(record, separators=(",", ":")) + "\n")
         return path
 
-    def iter_learnings(self, *, since: Optional[timedelta] = None) -> Iterator[Learning]:
-        cutoff: Optional[datetime] = None
+    def iter_learnings(self, *, since: timedelta | None = None) -> Iterator[Learning]:
+        cutoff: datetime | None = None
         if since:
-            cutoff = datetime.now(timezone.utc) - since
+            cutoff = datetime.now(UTC) - since
         for p in sorted((self.home / "learnings").glob("*.jsonl")):
             for line in p.read_text(encoding="utf-8").splitlines():
                 line = line.strip()

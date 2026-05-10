@@ -12,22 +12,18 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 import pytest
-
 from aurora import compost
 from aurora.compost import (
     Cluster,
-    LearningEntry,
-    PrResult,
     _compose_pr_body,
-    _compose_pr_title,
     _filter_clusters_by_threshold,
     propose_skill_pr,
 )
-
 
 # ---------- helpers ----------
 
@@ -323,7 +319,7 @@ def test_mcp_aurora_compost_dry_run_returns_candidates_not_stub(
 ) -> None:
     """The MCP tool used to return {"stub": True, ...}; now it must return
     a real `candidates` array fed by aurora.compost.propose_skill_pr."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aurora.mcp.server import _dispatch
 
@@ -331,7 +327,7 @@ def test_mcp_aurora_compost_dry_run_returns_candidates_not_stub(
     (home / "learnings").mkdir(parents=True)
     monkeypatch.setenv("AURORA_HOME", str(home))
 
-    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date = datetime.now(UTC).strftime("%Y-%m-%d")
     _seed_learnings_for_one_cluster(home / "learnings" / f"{date}.jsonl")
 
     result = asyncio.run(_dispatch("aurora_compost_dry_run", {"since_days": 1}))

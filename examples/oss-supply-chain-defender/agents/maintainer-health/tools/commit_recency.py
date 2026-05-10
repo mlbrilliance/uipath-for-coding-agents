@@ -10,8 +10,7 @@ exercised end-to-end before the credential resource is wired.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 import httpx
@@ -27,11 +26,11 @@ GITHUB_API = "https://api.github.com"
 class CommitRecencyResult(BaseModel):
     """Result of a default-branch commit-recency probe."""
     repo_url: str
-    days_since: Optional[int] = None
+    days_since: int | None = None
     found: bool = False
 
 
-def _parse_repo(repo_url: str) -> Optional[tuple[str, str]]:
+def _parse_repo(repo_url: str) -> tuple[str, str] | None:
     """Extract (org, repo) from a GitHub URL. None for non-GitHub hosts."""
     if not repo_url:
         return None
@@ -47,7 +46,7 @@ def _parse_repo(repo_url: str) -> Optional[tuple[str, str]]:
     return (org, repo)
 
 
-def _days_since(iso_ts: str) -> Optional[int]:
+def _days_since(iso_ts: str) -> int | None:
     """Convert an ISO-8601 commit timestamp into days since now (UTC)."""
     try:
         # Normalize trailing Z → +00:00 for fromisoformat.
@@ -57,8 +56,8 @@ def _days_since(iso_ts: str) -> Optional[int]:
     except ValueError:
         return None
     if committed.tzinfo is None:
-        committed = committed.replace(tzinfo=timezone.utc)
-    delta = datetime.now(timezone.utc) - committed
+        committed = committed.replace(tzinfo=UTC)
+    delta = datetime.now(UTC) - committed
     return max(0, delta.days)
 
 

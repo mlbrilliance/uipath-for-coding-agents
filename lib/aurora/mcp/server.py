@@ -22,13 +22,14 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import timedelta
+from datetime import UTC, timedelta
 from typing import Any
 
-from aurora.fingerprint import classify_event, append_resolution, list_clusters
-from aurora.policy import dry_run as policy_dry_run, load_policy
-from aurora.recall import recall as recall_fn
 from aurora import replay as replay_mod
+from aurora.fingerprint import append_resolution, classify_event, list_clusters
+from aurora.policy import dry_run as policy_dry_run
+from aurora.policy import load_policy
+from aurora.recall import recall as recall_fn
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def _build_server() -> Any:
     """
     try:
         from mcp.server import Server
-        from mcp.types import Tool, TextContent
+        from mcp.types import TextContent, Tool
     except ImportError as e:
         raise RuntimeError(
             "mcp package not installed; AURORA MCP server cannot run. "
@@ -204,14 +205,14 @@ async def _dispatch(name: str, args: dict) -> Any:
         return result.model_dump()
 
     if name == "aurora_compost_dry_run":
-        from datetime import datetime, timezone
-        from pathlib import Path as _Path
         import os as _os
+        from datetime import datetime
+        from pathlib import Path as _Path
 
         from aurora.compost import propose_skill_pr
 
         home = _Path(_os.environ.get("AURORA_HOME", "/opt/aurora"))
-        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date = datetime.now(UTC).strftime("%Y-%m-%d")
         learnings_path = home / "learnings" / f"{date}.jsonl"
         results = propose_skill_pr(learnings_path, dry_run=True)
         return {

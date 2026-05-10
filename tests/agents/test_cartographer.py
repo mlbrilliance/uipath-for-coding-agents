@@ -33,7 +33,7 @@ def test_every_selector_is_strict_and_has_fallback() -> None:
 
 
 def test_strict_false_is_rejected() -> None:
-    with pytest.raises(ValueError, match="R.SE.01"):
+    with pytest.raises(ValueError, match=r"R\.SE\.01"):
         Selector.model_validate(
             {
                 "name": "Bad",

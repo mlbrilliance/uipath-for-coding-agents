@@ -75,7 +75,7 @@ def test_architect_skill_picks_must_be_official() -> None:
         "rationale": "valid rationale text",
         "skill_picks": ["uipath-platform", "made-up-skill"],
     }
-    with pytest.raises(ValueError, match="R.SW.06.1"):
+    with pytest.raises(ValueError, match=r"R\.SW\.06\.1"):
         ADR.model_validate(bad)
 
 

@@ -13,10 +13,10 @@ import logging
 import os
 import re
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from aurora.uipath_client import UiPathClient
 
@@ -32,11 +32,11 @@ class GateResponse:
     task_id: int
     approved: bool
     decision: str
-    approver: Optional[str]
+    approver: str | None
     responded_at: str
     form_data: dict
     elapsed_seconds: int
-    escalated_to: Optional[str] = None
+    escalated_to: str | None = None
     timed_out: bool = False
 
 
@@ -47,14 +47,14 @@ class GateError(RuntimeError):
 def open_gate(
     *,
     kind: str,
-    candidate: Optional[str] = None,
-    context: Optional[dict] = None,
+    candidate: str | None = None,
+    context: dict | None = None,
     approvers_env: str = "AURORA_EMERGENCY_APPROVERS",
-    timeout_hours: Optional[int] = None,
-    on_timeout: Optional[str] = None,
-    catalog: Optional[str] = None,
+    timeout_hours: int | None = None,
+    on_timeout: str | None = None,
+    catalog: str | None = None,
     poll_interval: int = POLL_INTERVAL_SECONDS,
-    template_dir: Optional[Path] = None,
+    template_dir: Path | None = None,
 ) -> GateResponse:
     """Create an Action Center Form Task and wait for completion."""
     context = context or {}
@@ -108,7 +108,7 @@ def open_gate(
                 approver=current.get("LastModifiedBy", {}).get("EmailAddress")
                          if isinstance(current.get("LastModifiedBy"), dict)
                          else None,
-                responded_at=datetime.now(timezone.utc).isoformat(),
+                responded_at=datetime.now(UTC).isoformat(),
                 form_data=data,
                 elapsed_seconds=int(time.time() - started_at),
             )
@@ -130,21 +130,21 @@ def _handle_timeout(
         logger.warning("gate %s timed out — policy says auto-approve", kind)
         return GateResponse(
             task_id=task_id, approved=True, decision="auto-approve",
-            approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+            approver=None, responded_at=datetime.now(UTC).isoformat(),
             form_data={}, elapsed_seconds=elapsed, timed_out=True,
         )
     if on_timeout == "deny":
         logger.warning("gate %s timed out — policy says deny", kind)
         return GateResponse(
             task_id=task_id, approved=False, decision="timeout-deny",
-            approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+            approver=None, responded_at=datetime.now(UTC).isoformat(),
             form_data={}, elapsed_seconds=elapsed, timed_out=True,
         )
     # escalate (default)
     logger.warning("gate %s timed out — escalating to backup approvers", kind)
     return GateResponse(
         task_id=task_id, approved=False, decision="escalated",
-        approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+        approver=None, responded_at=datetime.now(UTC).isoformat(),
         form_data={}, elapsed_seconds=elapsed, timed_out=True,
         escalated_to="<backup-approver-pool>",
     )

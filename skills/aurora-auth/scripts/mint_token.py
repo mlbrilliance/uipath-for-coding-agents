@@ -19,11 +19,9 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-
 
 REQUIRED_ENV = ("UIPATH_URL", "UIPATH_CLIENT_ID", "UIPATH_CLIENT_SECRET")
 DEFAULT_SCOPES = (
@@ -34,7 +32,7 @@ DEFAULT_SCOPES = (
 TOKEN_BUFFER_SECONDS = 300
 
 
-def find_dotenv() -> Optional[Path]:
+def find_dotenv() -> Path | None:
     """Walk up from cwd looking for a .env file, max 5 levels."""
     cwd = Path.cwd().resolve()
     for d in [cwd, *cwd.parents][:6]:

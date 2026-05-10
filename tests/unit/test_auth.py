@@ -9,9 +9,8 @@ import time
 from pathlib import Path
 
 import pytest
-from pytest_httpx import HTTPXMock  # type: ignore[import-not-found]
-
 from aurora import auth
+from pytest_httpx import HTTPXMock  # type: ignore[import-not-found]
 
 
 def test_derive_identity_endpoint_strips_orchestrator_suffix() -> None:

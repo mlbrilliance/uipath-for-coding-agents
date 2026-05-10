@@ -25,13 +25,12 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from pydantic import BaseModel
 
 from aurora.uipath_client import UiPathClient
-
 
 logger = structlog.get_logger(__name__)
 
@@ -52,7 +51,7 @@ class ReplayResult(BaseModel):
     same_path: bool
     same_end_event: bool
     same_vars_at_each_gateway: bool
-    divergence_step: Optional[str] = None
+    divergence_step: str | None = None
     notes: str
 
 
@@ -62,7 +61,7 @@ class ReplayResult(BaseModel):
 def _compare_paths(
     original_log: list[dict[str, Any]],
     sandbox_log: list[dict[str, Any]],
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """Return (same, divergence_step). Compares the ordered list of `step`s.
 
     Divergence step is the first step in the *original* log that doesn't match
@@ -286,9 +285,9 @@ def _await_completion(
 
 def replay_instance(
     instance_id: str,
-    sandbox_folder: Optional[str] = None,
+    sandbox_folder: str | None = None,
     *,
-    client: Optional[UiPathClient] = None,
+    client: UiPathClient | None = None,
     await_seconds: int = DEFAULT_AWAIT_SECONDS,
     poll_seconds: int = DEFAULT_POLL_SECONDS,
 ) -> ReplayResult:

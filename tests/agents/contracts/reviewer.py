@@ -7,13 +7,13 @@ catalogue. The contract test asserts:
 """
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     ERROR = "ERROR"
     WARN = "WARN"
     INFO = "INFO"

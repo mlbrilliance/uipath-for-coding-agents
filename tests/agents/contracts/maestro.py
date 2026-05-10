@@ -7,7 +7,7 @@ assertions:
     2. Every `<bpmn:serviceTask>` and `<bpmn:userTask>` `id` in the BPMN
        must have a matching key in `bindings.json::tasks`.
 
-Discipline cited: R.M.01–R.M.06.
+Discipline cited: R.M.01-R.M.06.
 """
 from __future__ import annotations
 
