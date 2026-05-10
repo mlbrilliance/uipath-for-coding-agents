@@ -19,6 +19,15 @@ test = [
   "pytest-httpx>=0.30",
 ]
 
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Three top-level modules (app, maestro_client, security) — disambiguate the
+# flat layout for setuptools so `pip install -e .` succeeds.
+[tool.setuptools]
+py-modules = ["app", "maestro_client", "security"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
