@@ -52,7 +52,36 @@ class AuthError(RuntimeError):
 
 
 def derive_identity_endpoint(uipath_url: str) -> str:
-    """Strip /orchestrator_ suffix, add /identity_/connect/token."""
+    """Resolve the UiPath identity-server token endpoint.
+
+    UiPath has two deployment shapes that put `/identity_` in different
+    places:
+
+      Cloud (cloud.uipath.com): the identity endpoint lives at the
+        ACCOUNT level, not the tenant level. Verified against the
+        OpenID-discovery doc at
+        https://cloud.uipath.com/identity_/.well-known/openid-configuration
+        which advertises `token_endpoint:
+        https://cloud.uipath.com/identity_/connect/token`.
+
+      Self-hosted: `/identity_/` and `/orchestrator_/` are siblings under
+        the same host (or the tenant root). Strip the trailing
+        `/orchestrator_` and append `/identity_/connect/token`.
+
+    The earlier implementation always used the self-hosted rule, which
+    produced 404s for cloud URLs like
+    `https://cloud.uipath.com/{acct}/{tenant}/orchestrator_`. This
+    function now special-cases cloud.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(uipath_url.rstrip("/"))
+    host = (parsed.netloc or "").lower()
+    if host.endswith("cloud.uipath.com"):
+        # Account-level identity endpoint.
+        return f"{parsed.scheme}://{parsed.netloc}/identity_/connect/token"
+
+    # Self-hosted: strip /orchestrator_ from the path, identity is a sibling.
     base = uipath_url.rstrip("/")
     if base.endswith("/orchestrator_"):
         base = base[: -len("/orchestrator_")]
