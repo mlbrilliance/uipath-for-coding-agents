@@ -275,6 +275,18 @@
         "tests/unit/test_aurora_start_boot.py",
         "docs/runbook-aurora-start.md"
       ]
+    },
+    {
+      "id": "C-F5-SELF-HEAL",
+      "section": "Demo — break.sh self-heal",
+      "claim": "The Sentry → Diagnostician → Surgeon chain proven against a live UiPath tenant: events.jsonl emit, fingerprint cluster as auth-failed/token-expired, persistence to fingerprints.db, Surgeon's folder-scoped /odata/Assets read path. Four stage tests, gated by UIPATH_INTEGRATION=1.",
+      "evidence": [
+        "tests/integration/test_f5_self_heal_live.py",
+        "examples/oss-supply-chain-defender/break.sh",
+        "lib/aurora/sentry.py",
+        "lib/aurora/fingerprint.py",
+        "agents/surgeon.md"
+      ]
     }
   ]
 }
