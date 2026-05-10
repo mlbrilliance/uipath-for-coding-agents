@@ -27,6 +27,12 @@ build/
 *.nupkg
 .local/
 
+# .NET / C# build artifacts (Coded Workflows)
+bin/
+obj/
+*.user
+*.suo
+
 # Node
 node_modules/
 package-lock.json
@@ -34,3 +40,6 @@ package-lock.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Embedding model cache (downloaded by aurora-fingerprint at runtime)
+local_cache/

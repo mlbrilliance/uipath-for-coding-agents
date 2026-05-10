@@ -1,0 +1,13 @@
+{
+  "incoming": {
+    "source": "slack:#rpa-asks",
+    "text": "Every Monday I'm still pulling those vendor invoices from SharePoint manually.",
+    "actor": "U07ABCDEFG",
+    "timestamp": "2026-05-12T08:15:00Z"
+  },
+  "matched_candidate_id": "CAND-2026-05-08-1234abcd",
+  "cluster": "vendor-document-intake",
+  "similarity": 0.91,
+  "existing_mentions": 2,
+  "new_candidate_id": "CAND-2026-05-12-aabbccdd"
+}

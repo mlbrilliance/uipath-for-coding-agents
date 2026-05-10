@@ -1,0 +1,25 @@
+{
+  "candidate_id": "CAND-2026-05-10-77cc88dd",
+  "questions": [
+    {
+      "text": "PDD `## Trigger` is unclear — schedule, event-driven webhook, or on-demand?",
+      "asked_to": "compliance-lead@example.com",
+      "blocking": true
+    },
+    {
+      "text": "PDD `## Acceptance criteria #2` references a missing data source — should fallback be auto-skip or hold-for-owner?",
+      "asked_to": "compliance-lead@example.com",
+      "blocking": true
+    },
+    {
+      "text": "PDD `## Business owner` is unset — is the AP controller the right approver, or audit lead?",
+      "asked_to": "puneetsatyawan@gmail.com",
+      "blocking": true
+    },
+    {
+      "text": "PDD `## Inputs` lists 'various spreadsheets' — concretely, which SharePoint sites or shared drives?",
+      "asked_to": "compliance-lead@example.com",
+      "blocking": false
+    }
+  ]
+}

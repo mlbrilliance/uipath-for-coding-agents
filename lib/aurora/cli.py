@@ -19,13 +19,13 @@ import json
 import logging
 import os
 import sys
-from datetime import timedelta
+from datetime import UTC, timedelta
 from pathlib import Path
-from typing import Optional
 
 from aurora import __version__
 from aurora.auth import ensure_fresh_token
-from aurora.policy import find_repo_root, load_policy, dry_run as policy_dry_run, PolicyError
+from aurora.policy import PolicyError, find_repo_root, load_policy
+from aurora.policy import dry_run as policy_dry_run
 from aurora.recall import recall as recall_fn
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def _parse_duration(s: str) -> timedelta:
 def cmd_start(args: argparse.Namespace) -> int:
     print("[aurora] loading policy…", flush=True)
     try:
-        policy, warnings = load_policy(path=Path(args.policy) if args.policy else None)
+        _policy, warnings = load_policy(path=Path(args.policy) if args.policy else None)
     except PolicyError as e:
         print(f"[aurora] policy invalid: {e}", file=sys.stderr)
         return 1
@@ -52,15 +52,19 @@ def cmd_start(args: argparse.Namespace) -> int:
         print(f"[aurora] warning: {w}", file=sys.stderr)
     print(f"[aurora] policy: valid ({len(warnings)} warning(s))")
 
+    if args.skip_daemons:
+        # In-session boot only — no Orchestrator contact, so skip the token
+        # mint. Useful for `make ci`, dev sandboxes, and the F3 smoke test
+        # against a non-provisioned tenant.
+        print("[aurora] --skip-daemons: skipping UiPath token mint")
+        print("[aurora] --skip-daemons: not starting Operate fleet")
+        print("[aurora] conductor: ready (in-session mode)")
+        return 0
+
     print("[aurora] minting UiPath token…", flush=True)
     repo_root = find_repo_root()
     token = ensure_fresh_token(write_dotenv_path=repo_root / ".env")
     print(f"[aurora] uipath token: minted, expires_at={token.expires_at}, scopes={len(token.scope.split())}")
-
-    if args.skip_daemons:
-        print("[aurora] --skip-daemons: not starting Operate fleet")
-        print("[aurora] conductor: ready (in-session mode)")
-        return 0
 
     # Spawn the conductor daemon in-process.
     print("[aurora] starting conductor daemon…", flush=True)
@@ -86,8 +90,13 @@ def cmd_status(args: argparse.Namespace) -> int:
             print(f"AURORA — {snapshot['agents']}")
         return 0
 
-    # Full TUI (Textual). For brevity in v1 we just instruct the user to use --once.
-    print("[aurora] TUI dashboard not yet implemented; use --once or --json")
+    # Full TUI (Textual) — only when stdout is a real TTY. Falls through to the
+    # JSON snapshot otherwise so piped/scripted invocations stay deterministic.
+    if not sys.stdout.isatty():
+        return cmd_status(argparse.Namespace(**{**vars(args), "json": True, "once": True}))
+
+    from aurora.tui.app import AuroraStatusApp
+    AuroraStatusApp().run()
     return 0
 
 
@@ -102,7 +111,24 @@ def cmd_policy(args: argparse.Namespace) -> int:
             return 1
         for w in warnings:
             print(f"[aurora-policy] warning: {w}", file=sys.stderr)
+        live_failed = False
+        if args.live:
+            from aurora.policy_live import run_live_probes
+            print("[aurora-policy] running live probes (orchestrator, github, action-catalog)…")
+            probes = run_live_probes()
+            for f in probes.failures:
+                print(f"[aurora-policy] live: {f}", file=sys.stderr)
+            if not probes.all_ok:
+                live_failed = True
+                print(
+                    f"[aurora-policy] live probes: {sum([probes.orchestrator_ok, probes.github_ok, probes.action_catalog_ok])}/3 ok",
+                    file=sys.stderr,
+                )
+            else:
+                print("[aurora-policy] live probes: 3/3 ok")
         print(f"[aurora-policy] valid ({len(warnings)} warning(s))")
+        if live_failed:
+            return 3
         return 0 if not (args.strict and warnings) else 2
 
     if args.policy_cmd == "dry-run":
@@ -156,7 +182,16 @@ def cmd_restart(_: argparse.Namespace) -> int:
 # ---------- compost ----------
 
 def cmd_compost(args: argparse.Namespace) -> int:
-    print(f"[aurora-compost] would run compost step (since={args.since}, dry_run={args.dry_run})")
+    from datetime import datetime
+
+    from aurora.compost import propose_skill_pr
+
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
+    date = datetime.now(UTC).strftime("%Y-%m-%d")
+    learnings_path = home / "learnings" / f"{date}.jsonl"
+
+    results = propose_skill_pr(learnings_path, dry_run=bool(args.dry_run))
+    print(json.dumps([r.model_dump() for r in results], indent=2, default=str))
     return 0
 
 

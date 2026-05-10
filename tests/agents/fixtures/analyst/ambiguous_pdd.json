@@ -1,0 +1,38 @@
+{
+  "min_score_for_build": 40,
+  "pdd": {
+    "process_name": "ComplianceCorpus",
+    "business_owner": "unknown",
+    "trigger": "on-demand",
+    "inputs": ["various spreadsheets across teams"],
+    "outputs": ["a single compliance pack"],
+    "actors": ["user", "ai-agent"],
+    "acceptance_criteria": [
+      {
+        "given": "the auditor requests a compliance pack",
+        "when": "they specify the period",
+        "then": "the pack is generated within a working day"
+      },
+      {
+        "given": "a missing data source",
+        "when": "the agent cannot resolve it",
+        "then": "the request is paused and a question is routed to the owner"
+      },
+      {
+        "given": "an approved pack",
+        "when": "the user signs off",
+        "then": "the pack is archived to the compliance vault"
+      }
+    ],
+    "out_of_scope": [],
+    "ambiguity": 0.72
+  },
+  "roi": {
+    "frequency": 0.4,
+    "pain": 0.6,
+    "feasibility": 0.3,
+    "weights": {"frequency": 0.4, "pain": 0.4, "feasibility": 0.2},
+    "score": 46,
+    "rationale": "quarterly cadence, real pain but feasibility uncertain pending interview"
+  }
+}

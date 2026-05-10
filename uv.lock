@@ -317,7 +317,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.4" },
     { name = "sqlalchemy", specifier = ">=2.0" },
     { name = "structlog", specifier = ">=24.1.0" },
-    { name = "textual", specifier = ">=0.50" },
+    { name = "textual", specifier = ">=0.79" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "uipath", specifier = ">=2.10.0" },
     { name = "uipath-langchain", specifier = ">=0.5.0" },

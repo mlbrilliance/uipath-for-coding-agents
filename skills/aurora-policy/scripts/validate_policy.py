@@ -18,7 +18,6 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator
 
-
 ENV_REF = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}")
 
 

@@ -1,0 +1,32 @@
+{
+  "period": "2026-Q2",
+  "recommendations": [
+    {
+      "kind": "consolidate",
+      "target_id": "BOT-vendor-invoice-pull-eu+BOT-vendor-invoice-pull-us",
+      "rationale": "89% workflow similarity after normalisation; same actors; same Orchestrator folder.",
+      "evidence": [
+        "diff < 30%",
+        "combined runs > either alone"
+      ]
+    },
+    {
+      "kind": "deprecate",
+      "target_id": "BOT-old-erp-export",
+      "rationale": "0 successful runs in last 90 days; last modified 2024-11.",
+      "evidence": ["Orchestrator job count = 0", "auditor: no downstream consumers"]
+    },
+    {
+      "kind": "prioritise",
+      "target_id": "CAND-2026-04-19-aabbccdd",
+      "rationale": "Originally scored 65; +3 mentions in the last 7 days.",
+      "evidence": ["mention timeline"]
+    },
+    {
+      "kind": "invest",
+      "target_id": "skill:selector-rehydrate",
+      "rationale": "Used 11 times this quarter across 4 projects; cluster has converged.",
+      "evidence": ["fingerprint usage 11"]
+    }
+  ]
+}

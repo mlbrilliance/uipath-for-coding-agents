@@ -4,7 +4,7 @@
 
 ## One-paragraph summary
 
-A human writes `policy.yaml`. AURORA reads it. From there, three concurrent fleets — Discovery (5 agents), Build (8), Operate (5) — coordinated by a Conductor (1) and gated by Action Center, take an automation from a Slack message to a running Maestro process, then keep it running across selector drift, token rotation, API changes, deprecation, and continuous self-improvement. The swarm uses UiPath's official `uipath-python` SDK, the official `UiPath/skills` skill catalog, the `uip` CLI, and ten custom AURORA skills. Inference is Claude (subscription OAuth, no API key); auth into UiPath is OAuth client-credentials.
+A human writes `policy.yaml`. AURORA reads it. From there, three concurrent fleets — Discovery (5 agents), Build (8), Operate (5) — coordinated by a Conductor (1) and gated by Action Center, take an automation from a Slack message to a running Maestro process, then keep it running across selector drift, token rotation, API changes, deprecation, and continuous self-improvement. The swarm uses UiPath's official `uipath-python` SDK, the official `UiPath/skills` skill catalog, the `uipath` CLI, and ten custom AURORA skills. Inference is Claude (subscription OAuth, no API key); auth into UiPath is OAuth client-credentials.
 
 ## The three concurrent loops
 
@@ -87,7 +87,7 @@ REFramework is great for a single transactional bot. AURORA builds those when Ar
 
 Two distinct authentications:
 
-1. **UiPath** — confidential External Application, OAuth client-credentials grant. `aurora-auth` skill mints fresh tokens at runtime, writes to `.env` (so `uip` CLI sees them) and `~/.uipath/aurora-token.json` (so the daemon's in-process cache sees them). Tokens last 1 hour; AURORA refreshes 5 minutes before expiry.
+1. **UiPath** — confidential External Application, OAuth client-credentials grant. `aurora-auth` skill mints fresh tokens at runtime, writes to `.env` (so `uipath` CLI sees them) and `~/.uipath/aurora-token.json` (so the daemon's in-process cache sees them). Tokens last 1 hour; AURORA refreshes 5 minutes before expiry.
 
 2. **Claude** — subscription OAuth via `claude login`. Credentials live at `~/.claude/credentials.json`. **Both Claude Code (Build fleet via subagents) and the Claude Agent SDK (Operate-fleet daemons) read this file.** No `ANTHROPIC_API_KEY`. The `.claude/settings.json` even adds a deny-rule on `anthropic.com/v1/messages` to enforce this — any agent that tries direct API access fails loudly.
 
@@ -167,7 +167,7 @@ Each is a known boundary, mentioned where it's relevant.
 
 ## Attribution
 
-Built on UiPath's official `uipath-python` SDK, `UiPath/skills` skill catalog, and `uip` CLI. Pattern inspirations (none of their code is reused — only the patterns):
+Built on UiPath's official `uipath-python` SDK, `UiPath/skills` skill catalog, and `uipath` CLI. Pattern inspirations (none of their code is reused — only the patterns):
 
 - **Obra Superpowers** — TDD red/green-refactor; parallel sub-agent dispatch via worktrees
 - **Matt Pocock skills** — small, sharp, single-purpose primitives; planning before code

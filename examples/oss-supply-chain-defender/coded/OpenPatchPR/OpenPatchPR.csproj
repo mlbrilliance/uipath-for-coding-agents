@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>AuroraSupplyChainDefender.GitHub</RootNamespace>
+    <AssemblyName>AuroraSupplyChainDefender.GitHub.OpenPatchPR</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <PackageId>AuroraSupplyChainDefender.GitHub.OpenPatchPR</PackageId>
+    <Version>0.1.0</Version>
+    <Description>OpenPatchPR Coded Workflow for the AURORA Open-Source Supply-Chain Defender demo. Opens a real GitHub PR for a Critical-severity vulnerability fix via Octokit, applying labels so the AutoMerge DMN gate can act on real artifacts.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UiPath.CodedWorkflows" Version="24.10.2" />
+    <PackageReference Include="Octokit" Version="13.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>

@@ -11,7 +11,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -25,31 +25,31 @@ ENV_REF = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}")
 class AuroraPolicy:
     """Typed view over policy.yaml after env expansion + schema validation."""
     version: int
-    identity: dict
+    identity: dict[str, Any]
     uipath_scopes: list[str]
-    discovery: dict
-    build: dict
-    deploy: dict
-    operate: dict
-    gates: list[dict]
-    memory: dict
-    routing: dict
-    budget: dict
-    raw: dict = field(repr=False, default_factory=dict)
+    discovery: dict[str, Any]
+    build: dict[str, Any]
+    deploy: dict[str, Any]
+    operate: dict[str, Any]
+    gates: list[dict[str, Any]]
+    memory: dict[str, Any]
+    routing: dict[str, Any]
+    budget: dict[str, Any]
+    raw: dict[str, Any] = field(repr=False, default_factory=dict)
 
     # Convenience accessors
 
     @property
     def folder(self) -> str:
-        return self.identity["uipath_folder"]
+        return cast(str, self.identity["uipath_folder"])
 
     @property
     def action_catalog(self) -> str:
-        return self.identity["action_catalog"]
+        return cast(str, self.identity["action_catalog"])
 
     @property
     def github_org(self) -> str:
-        return self.identity["github_org"]
+        return cast(str, self.identity["github_org"])
 
     @property
     def scope_string(self) -> str:
@@ -58,9 +58,9 @@ class AuroraPolicy:
     def model_for_agent(self, agent: str) -> str:
         """Resolve the agent's model binding through the routing tier."""
         tier = self.routing["bindings"].get(agent, "mid_stakes")
-        return self.routing["defaults"][tier]
+        return cast(str, self.routing["defaults"][tier])
 
-    def gate(self, name: str) -> dict:
+    def gate(self, name: str) -> dict[str, Any]:
         for g in self.gates:
             if g.get("name") == name:
                 return g
@@ -98,7 +98,7 @@ def expand_env(obj: Any) -> Any:
 
 
 def validate_policy(
-    policy: dict,
+    policy: dict[str, Any],
     *,
     schema_path: Path | None = None,
     strict: bool = False,
@@ -118,7 +118,7 @@ def validate_policy(
     return warnings
 
 
-def _soft_warnings(policy: dict) -> list[str]:
+def _soft_warnings(policy: dict[str, Any]) -> list[str]:
     out: list[str] = []
     if policy.get("build", {}).get("test_coverage_floor", 1.0) < 0.7:
         out.append("build.test_coverage_floor < 0.7 — too lenient")
@@ -176,7 +176,7 @@ def load_policy(
     )
 
 
-def dry_run(policy: AuroraPolicy, *, since_hours: int = 24) -> dict:
+def dry_run(policy: AuroraPolicy, *, since_hours: int = 24) -> dict[str, Any]:
     """Simulate Conductor's next N hours given the current backlog and Operate state.
 
     This is a SHAPE check, not an execution. Returns a structured forecast that

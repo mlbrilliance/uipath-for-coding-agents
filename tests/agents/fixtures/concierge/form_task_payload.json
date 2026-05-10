@@ -1,0 +1,31 @@
+{
+  "kind": "emergency_patch",
+  "catalog": "aurora_supply_chain_approvals",
+  "folder_name": "AURORA-Demo",
+  "title": "Approve emergency patch for OssSupplyChainDefender",
+  "priority": "High",
+  "fields": [
+    {
+      "key": "approve",
+      "type": "select",
+      "label": "Approve?",
+      "options": ["yes", "no", "more-info"]
+    },
+    {
+      "key": "diff_url",
+      "type": "url",
+      "label": "Patch diff"
+    },
+    {
+      "key": "notes",
+      "type": "textarea",
+      "label": "Reviewer notes"
+    }
+  ],
+  "data": {
+    "candidate": "CAND-2026-05-09-01",
+    "context_links": [
+      ".aurora/triage/2026-05-09T03-42-OssSupplyChainDefender.md"
+    ]
+  }
+}

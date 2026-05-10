@@ -29,7 +29,7 @@ dependencies = [
   "httpx>=0.27",
   "structlog>=24.1.0",
   "rich>=13.7",
-  "textual>=0.50",          # TUI dashboard
+  "textual>=0.79",          # TUI dashboard
   "watchfiles>=0.21",
 
   # Memory + fingerprinting
@@ -85,6 +85,20 @@ ignore = ["E501"]
 python_version = "3.11"
 strict = true
 warn_return_any = true
+
+# The MCP server's tool decorators (@server.list_tools(), @server.call_tool()) are
+# untyped in mcp<0.10. The decorated functions are correct in our code but mypy
+# (under `strict`) flags them. Narrow the rule rather than disable strict mode.
+[[tool.mypy.overrides]]
+module = "aurora.mcp.server"
+disable_error_code = ["untyped-decorator", "no-untyped-call"]
+
+# Playwright (used by lib/aurora/playwright/* — Maestro publish capture + UI
+# fallback) is an optional runtime dep; we don't require it in CI and ship no
+# stubs by default. Tests always mock it at the boundary.
+[[tool.mypy.overrides]]
+module = "playwright.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

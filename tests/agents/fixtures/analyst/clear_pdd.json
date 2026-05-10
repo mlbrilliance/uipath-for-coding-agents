@@ -1,0 +1,38 @@
+{
+  "min_score_for_build": 40,
+  "pdd": {
+    "process_name": "VendorInvoiceIngest",
+    "business_owner": "ap-controller@example.com",
+    "trigger": "schedule",
+    "inputs": ["SharePoint folder: /sites/finance/Invoices"],
+    "outputs": ["NetSuite AP staging table", "audit log row"],
+    "actors": ["rpa-bot", "external-system"],
+    "acceptance_criteria": [
+      {
+        "given": "a new PDF in the inbox folder",
+        "when": "the schedule fires at 06:00",
+        "then": "the invoice is parsed and posted to NetSuite within 5 minutes"
+      },
+      {
+        "given": "a malformed PDF",
+        "when": "parsing fails",
+        "then": "the file is moved to /Quarantine and ops is notified"
+      },
+      {
+        "given": "a duplicate invoice number",
+        "when": "the bot detects a prior posting",
+        "then": "the new copy is skipped with a `duplicate` audit row"
+      }
+    ],
+    "out_of_scope": ["non-PDF formats", "multi-currency conversion"],
+    "ambiguity": 0.18
+  },
+  "roi": {
+    "frequency": 0.8,
+    "pain": 0.9,
+    "feasibility": 0.7,
+    "weights": {"frequency": 0.4, "pain": 0.4, "feasibility": 0.2},
+    "score": 82,
+    "rationale": "weekly cadence, 2 hours per occurrence, public APIs available"
+  }
+}

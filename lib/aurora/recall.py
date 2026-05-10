@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta, timezone
+from dataclasses import asdict
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from aurora.fingerprint import list_clusters
 from aurora.memory import MemorySlice, MemoryStore
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 # Default per-agent recall preferences (mirrors the table in skills/aurora-recall/SKILL.md)
-AGENT_DEFAULTS: dict[str, dict] = {
+AGENT_DEFAULTS: dict[str, dict[str, Any]] = {
     "scout":         {"tiers": [],                "fleet": "discovery"},
     "curator":       {"tiers": ["org"],           "fleet": "discovery"},
     "analyst":       {"tiers": ["org"],           "fleet": "discovery"},
@@ -47,15 +47,15 @@ AGENT_DEFAULTS: dict[str, dict] = {
 
 def recall(
     *,
-    query: Optional[str] = None,
-    agent: Optional[str] = None,
-    candidate: Optional[str] = None,
-    tier: Optional[str] = None,
-    fleet: Optional[str] = None,
-    since: Optional[timedelta] = None,
+    query: str | None = None,
+    agent: str | None = None,
+    candidate: str | None = None,
+    tier: str | None = None,
+    fleet: str | None = None,
+    since: timedelta | None = None,
     limit: int = 10,
-    home: Optional[Path] = None,
-) -> list[dict]:
+    home: Path | None = None,
+) -> list[dict[str, Any]]:
     """Return ranked memory slices.
 
     Args:
@@ -74,7 +74,7 @@ def recall(
         else (defaults.get("tiers") or ["project", "org", "skill"])
     )
     fleet = fleet or defaults.get("fleet")
-    cutoff_ts = (datetime.now(timezone.utc) - since).isoformat() if since else None
+    cutoff_ts = (datetime.now(UTC) - since).isoformat() if since else None
 
     slices: list[MemorySlice] = []
 
@@ -123,7 +123,7 @@ def recall(
     return [asdict(s) for s in ranked]
 
 
-def _term_match(text: str, query: Optional[str]) -> bool:
+def _term_match(text: str, query: str | None) -> bool:
     if not query:
         return True
     terms = [t.lower() for t in query.split() if len(t) >= 3]
@@ -133,11 +133,11 @@ def _term_match(text: str, query: Optional[str]) -> bool:
     return all(t in low for t in terms[:3])  # at least the first 3 substantial terms
 
 
-def _rank(s: MemorySlice, query: Optional[str], fleet: Optional[str]) -> float:
+def _rank(s: MemorySlice, query: str | None, fleet: str | None) -> float:
     recency = 1.0
     if s.ts:
         try:
-            age_days = (datetime.now(timezone.utc) - datetime.fromisoformat(s.ts.replace("Z", "+00:00"))).days
+            age_days = (datetime.now(UTC) - datetime.fromisoformat(s.ts.replace("Z", "+00:00"))).days
             recency = math.exp(-age_days / 30)  # 30-day half-life
         except ValueError:
             pass

@@ -1,0 +1,18 @@
+{
+  "session_id": "f42c6473-4175-44a6-9657-d49465378e8f",
+  "transcript_path": "/home/claude/.claude/projects/-home-claude-uipath-for-coding-agents/f42c6473-4175-44a6-9657-d49465378e8f.jsonl",
+  "cwd": "/home/claude/uipath-for-coding-agents",
+  "permission_mode": "bypassPermissions",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "click('Submit')",
+    "description": "selector probe (synthetic)"
+  },
+  "tool_response": {
+    "stdout": "",
+    "stderr": "SelectorNotFoundException: aaname='Submit' wnd app='chrome.exe' did not match any element",
+    "interrupted": false,
+    "isError": true
+  }
+}

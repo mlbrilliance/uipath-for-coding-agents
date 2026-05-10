@@ -4,10 +4,9 @@ from __future__ import annotations
 from datetime import timedelta
 from pathlib import Path
 
-import pytest
-
 from aurora import memory as memory_mod
 from aurora.recall import recall as _recall
+
 
 class _RecallMod:
     recall = staticmethod(_recall)
@@ -31,7 +30,7 @@ def test_append_and_iter_learnings(tmp_aurora_home: Path) -> None:
 
     learnings = list(store.iter_learnings())
     assert len(learnings) == 2
-    assert all(l.agent == "surgeon" for l in learnings)
+    assert all(learning.agent == "surgeon" for learning in learnings)
 
 
 def test_iter_learnings_filters_by_since(tmp_aurora_home: Path) -> None:

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aurora-demo-org/schemas/uipath_json.schema.json",
+  "title": "uipath.json — frozen against the shape `uipath init` writes (uipath-python 2.10+)",
+  "description": "This schema captures the actual structure the official `uipath init` CLI generates. AURORA-specific extensions (model.tier, credentials, tracing) that earlier drafts hand-authored into uipath.json have moved elsewhere: model_binding_tier lives in the process-level bindings.json, credentials live in the per-agent bindings.json::resources, tracing is a runtime concern handled inside main.py. Source: uipath._cli.cli_init in the installed SDK.",
+  "type": "object",
+  "required": ["$schema", "runtimeOptions", "packOptions", "functions", "agents"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://cloud.uipath.com/draft/2024-12/uipath"
+    },
+    "runtimeOptions": {
+      "type": "object",
+      "required": ["isConversational"],
+      "additionalProperties": true,
+      "properties": {
+        "isConversational": { "type": "boolean" }
+      }
+    },
+    "packOptions": {
+      "type": "object",
+      "required": [
+        "fileExtensionsIncluded",
+        "filesIncluded",
+        "filesExcluded",
+        "directoriesExcluded",
+        "includeUvLock"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "fileExtensionsIncluded": { "type": "array", "items": { "type": "string" } },
+        "filesIncluded":          { "type": "array", "items": { "type": "string" } },
+        "filesExcluded":          { "type": "array", "items": { "type": "string" } },
+        "directoriesExcluded":    { "type": "array", "items": { "type": "string" } },
+        "includeUvLock":          { "type": "boolean" }
+      }
+    },
+    "functions": {
+      "type": "object",
+      "description": "Map of function-name → 'file.py:functionName' entry pointer.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_./-]+\\.py:[A-Za-z_][A-Za-z0-9_]*$"
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

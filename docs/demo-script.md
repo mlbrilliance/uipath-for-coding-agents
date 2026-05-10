@@ -113,10 +113,10 @@ tester: 14 tests written, 14 green, coverage 0.92 → ready-for-deploy
 In the bottom-left pane:
 
 ```
-$ uip publish --folder AURORA-Demo-Dev
-[uip] OssSupplyChainDefender@0.1.0 published
-[uip] AuroraVulnLookup@0.1.0 published
-[uip] AuroraSupplyChainDefender@0.1.0 published (XAML + coded workflows)
+$ uipath publish --folder AURORA-Demo-Dev
+[uipath] OssSupplyChainDefender@0.1.0 published
+[uipath] AuroraVulnLookup@0.1.0 published
+[uipath] AuroraSupplyChainDefender@0.1.0 published (XAML + coded workflows)
 ```
 
 Auto-promote to test (per `policy.yaml::deploy.test.auto: true`).

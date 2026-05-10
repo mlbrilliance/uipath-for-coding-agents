@@ -22,11 +22,13 @@ import asyncio
 import json
 import logging
 import sys
-from datetime import timedelta
+from datetime import UTC, timedelta
 from typing import Any
 
-from aurora.fingerprint import classify_event, append_resolution, list_clusters
-from aurora.policy import dry_run as policy_dry_run, load_policy
+from aurora import replay as replay_mod
+from aurora.fingerprint import append_resolution, classify_event, list_clusters
+from aurora.policy import dry_run as policy_dry_run
+from aurora.policy import load_policy
 from aurora.recall import recall as recall_fn
 
 logger = logging.getLogger(__name__)
@@ -39,7 +41,7 @@ def _build_server() -> Any:
     """
     try:
         from mcp.server import Server
-        from mcp.types import Tool, TextContent
+        from mcp.types import TextContent, Tool
     except ImportError as e:
         raise RuntimeError(
             "mcp package not installed; AURORA MCP server cannot run. "
@@ -155,7 +157,7 @@ def _build_server() -> Any:
         ]
 
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict | None) -> list[TextContent]:
+    async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextContent]:
         arguments = arguments or {}
         result = await _dispatch(name, arguments)
         return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
@@ -163,7 +165,7 @@ def _build_server() -> Any:
     return server
 
 
-async def _dispatch(name: str, args: dict) -> Any:
+async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     """Route the MCP tool call to the in-process implementation."""
     if name == "aurora_recall":
         since = timedelta(days=args["since_days"]) if "since_days" in args else None
@@ -193,19 +195,29 @@ async def _dispatch(name: str, args: dict) -> Any:
         return {"ok": True, "cluster_id": args["cluster_id"]}
 
     if name == "aurora_replay_instance":
-        # Stub for v1 — real implementation in lib/aurora/replay.py (next batch)
-        return {
-            "stub": True,
-            "would_replay": args,
-            "note": "replay implementation lands in v0.2",
-        }
+        instance_id = args.get("instance_id")
+        if not instance_id:
+            raise ValueError("aurora_replay_instance requires `instance_id`")
+        result = replay_mod.replay_instance(
+            instance_id=instance_id,
+            sandbox_folder=args.get("sandbox_folder"),
+        )
+        return result.model_dump()
 
     if name == "aurora_compost_dry_run":
+        import os as _os
+        from datetime import datetime
+        from pathlib import Path as _Path
+
+        from aurora.compost import propose_skill_pr
+
+        home = _Path(_os.environ.get("AURORA_HOME", str(_Path.home() / ".aurora")))
+        date = datetime.now(UTC).strftime("%Y-%m-%d")
+        learnings_path = home / "learnings" / f"{date}.jsonl"
+        results = propose_skill_pr(learnings_path, dry_run=True)
         return {
-            "stub": True,
             "since_days": args.get("since_days", 1),
-            "candidates": [],
-            "note": "compost implementation lands in v0.2",
+            "candidates": [r.model_dump() for r in results],
         }
 
     if name == "aurora_policy_dry_run":
@@ -218,7 +230,7 @@ async def _dispatch(name: str, args: dict) -> Any:
 async def _serve() -> None:
     """Run the MCP server on stdio."""
     try:
-        from mcp.server.stdio import stdio_server  # type: ignore[import-not-found]
+        from mcp.server.stdio import stdio_server
     except ImportError as e:
         raise RuntimeError(
             "mcp.server.stdio not available; install mcp>=0.9 with stdio support"

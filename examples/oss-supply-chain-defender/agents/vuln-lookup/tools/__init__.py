@@ -1,4 +1,4 @@
 """External vulnerability data sources used by the agent."""
-from . import nvd, osv, github_advisory
+from . import github_advisory, nvd, osv
 
-__all__ = ["nvd", "osv", "github_advisory"]
+__all__ = ["github_advisory", "nvd", "osv"]

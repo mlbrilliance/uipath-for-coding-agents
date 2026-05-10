@@ -19,11 +19,9 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-
 
 REQUIRED_ENV = ("UIPATH_URL", "UIPATH_CLIENT_ID", "UIPATH_CLIENT_SECRET")
 DEFAULT_SCOPES = (
@@ -34,7 +32,7 @@ DEFAULT_SCOPES = (
 TOKEN_BUFFER_SECONDS = 300
 
 
-def find_dotenv() -> Optional[Path]:
+def find_dotenv() -> Path | None:
     """Walk up from cwd looking for a .env file, max 5 levels."""
     cwd = Path.cwd().resolve()
     for d in [cwd, *cwd.parents][:6]:
@@ -141,7 +139,7 @@ def main() -> int:
     access = token["access_token"]
     expires_at = int(time.time()) + int(token.get("expires_in", 3600))
 
-    # Write to .env so uip CLI sees it
+    # Write to .env so uipath CLI sees it
     if dotenv_path:
         write_env_var(dotenv_path, "UIPATH_ACCESS_TOKEN", access)
 

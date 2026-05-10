@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>AuroraSupplyChainDefender.GitHub</RootNamespace>
+    <AssemblyName>AuroraSupplyChainDefender.OpenAutoPR</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <PackageId>AuroraSupplyChainDefender.OpenAutoPR</PackageId>
+    <Version>0.1.0</Version>
+    <Description>OpenAutoPR Coded Workflow for the AURORA Open-Source Supply-Chain Defender demo. Opens a SemVer MINOR-only bump PR for HIGH-severity vulnerability findings.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UiPath.CodedWorkflows" Version="24.10.2" />
+    <PackageReference Include="Octokit" Version="13.0.1" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>

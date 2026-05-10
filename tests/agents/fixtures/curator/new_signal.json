@@ -1,0 +1,13 @@
+{
+  "incoming": {
+    "source": "jira:OPS-2999",
+    "text": "Quarterly compliance pack assembly is killing the audit team.",
+    "actor": "compliance-lead@example.com",
+    "timestamp": "2026-05-10T17:02:00Z"
+  },
+  "matched_candidate_id": "CAND-2026-05-08-1234abcd",
+  "cluster": "compliance-pack-assembly",
+  "similarity": 0.21,
+  "existing_mentions": 0,
+  "new_candidate_id": "CAND-2026-05-10-77cc88dd"
+}

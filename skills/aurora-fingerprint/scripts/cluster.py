@@ -16,8 +16,6 @@ import re
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Optional
-
 
 CANONICAL_KINDS = {
     "selector-broken", "auth-failed", "external-api-drift",
@@ -26,7 +24,7 @@ CANONICAL_KINDS = {
 
 
 def db_path() -> Path:
-    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
     home.mkdir(parents=True, exist_ok=True)
     return home / "fingerprints.db"
 
@@ -174,20 +172,26 @@ def derive_kind(event: dict) -> str:
 
 
 def derive_refinement(kind: str, exception_type: str, msg: str) -> str:
-    et = exception_type.lower()
     m = msg.lower()
     if kind == "selector-broken":
-        if "aaname" in m: return "aaname-mismatch"
-        if "wnd" in m: return "wnd-mismatch"
-        if "html" in m: return "html-mismatch"
-        if "match was found, but ambiguous" in m: return "ambiguous-multi-match"
+        if "aaname" in m:
+            return "aaname-mismatch"
+        if "wnd" in m:
+            return "wnd-mismatch"
+        if "html" in m:
+            return "html-mismatch"
+        if "match was found, but ambiguous" in m:
+            return "ambiguous-multi-match"
         return "generic"
     if kind == "auth-failed":
-        if "401" in m: return "token-expired"
-        if "403" in m: return "scope-insufficient"
+        if "401" in m:
+            return "token-expired"
+        if "403" in m:
+            return "scope-insufficient"
         return "generic"
     if kind == "timing":
-        if "30000" in m or "30s" in m: return "timeout-30s"
+        if "30000" in m or "30s" in m:
+            return "timeout-30s"
         return "generic"
     return "generic"
 
@@ -201,7 +205,7 @@ def append_resolution(cluster_id: str, pr: str, summary: str) -> None:
     db.commit()
 
 
-def list_clusters(kind: Optional[str], limit: int) -> list[dict]:
+def list_clusters(kind: str | None, limit: int) -> list[dict]:
     db = conn()
     if kind:
         rows = db.execute(

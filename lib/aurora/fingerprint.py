@@ -20,7 +20,7 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +49,11 @@ class ClusterResult:
     size: int
     novel: bool
     confidence: float
-    prior_resolution: Optional[dict]
+    prior_resolution: dict[str, Any] | None
 
 
 def db_path() -> Path:
-    home = Path(os.environ.get("AURORA_HOME", "/opt/aurora"))
+    home = Path(os.environ.get("AURORA_HOME", str(Path.home() / ".aurora")))
     home.mkdir(parents=True, exist_ok=True)
     return home / "fingerprints.db"
 
@@ -91,7 +91,7 @@ def message_skeleton(msg: str) -> str:
     return out[:500]
 
 
-def derive_kind(event: dict) -> str:
+def derive_kind(event: dict[str, Any]) -> str:
     et = (event.get("details", {}).get("exception_type") or "").lower()
     msg = (event.get("details", {}).get("message") or "").lower()
     if "selectornotfound" in et or "selector" in msg:
@@ -112,22 +112,29 @@ def derive_kind(event: dict) -> str:
 def derive_refinement(kind: str, exception_type: str, msg: str) -> str:
     m = (msg or "").lower()
     if kind == "selector-broken":
-        if "aaname" in m: return "aaname-mismatch"
-        if "wnd" in m: return "wnd-mismatch"
-        if "html" in m: return "html-mismatch"
-        if "ambiguous" in m: return "ambiguous-multi-match"
+        if "aaname" in m:
+            return "aaname-mismatch"
+        if "wnd" in m:
+            return "wnd-mismatch"
+        if "html" in m:
+            return "html-mismatch"
+        if "ambiguous" in m:
+            return "ambiguous-multi-match"
         return "generic"
     if kind == "auth-failed":
-        if "401" in m: return "token-expired"
-        if "403" in m: return "scope-insufficient"
+        if "401" in m:
+            return "token-expired"
+        if "403" in m:
+            return "scope-insufficient"
         return "generic"
     if kind == "timing":
-        if "30000" in m or "30s" in m: return "timeout-30s"
+        if "30000" in m or "30s" in m:
+            return "timeout-30s"
         return "generic"
     return "generic"
 
 
-def classify_event(event: dict) -> ClusterResult:
+def classify_event(event: dict[str, Any]) -> ClusterResult:
     """Map an event to a fingerprint, update SQLite, return cluster info."""
     details = event.get("details", {})
     kind = event.get("kind") or "novel-fault"
@@ -142,7 +149,7 @@ def classify_event(event: dict) -> ClusterResult:
 
     raw_fid = f"{kind}|{refinement}|{locality}|{exception_type}|{skeleton}"
     fid = hashlib.sha256(raw_fid.encode("utf-8")).hexdigest()[:16]
-    cid = hashlib.sha256(f"{kind}|{refinement}|{locality}".encode("utf-8")).hexdigest()[:8]
+    cid = hashlib.sha256(f"{kind}|{refinement}|{locality}".encode()).hexdigest()[:8]
 
     db = conn()
     cur = db.cursor()
@@ -197,7 +204,7 @@ def append_resolution(*, cluster_id: str, pr: str, summary: str) -> None:
     db.commit()
 
 
-def list_clusters(*, kind: Optional[str] = None, limit: int = 20) -> list[dict]:
+def list_clusters(*, kind: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
     db = conn()
     if kind:
         rows = db.execute(

@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "note": "SYNTHETIC fixture — reverse-engineered from Studio Web project structure. Re-capture via lib/aurora/playwright/capture.py when a live tenant is available.",
+  "method": "POST",
+  "url_path": "/studio_/api/publish",
+  "headers": {
+    "Authorization": "Bearer {{UIPATH_ACCESS_TOKEN}}",
+    "X-UIPATH-OrganizationUnitId": "{{folder_id}}",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "projectKey": "{{project_key}}",
+    "version": "{{version}}",
+    "versionBump": "patch",
+    "projectFiles": [],
+    "isLatest": true
+  }
+}

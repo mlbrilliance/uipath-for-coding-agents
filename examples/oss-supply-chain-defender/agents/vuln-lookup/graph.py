@@ -19,11 +19,10 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 import structlog
-from langgraph.graph import StateGraph, END
 from langchain_anthropic import ChatAnthropic
-
-from tools import nvd, osv, github_advisory
+from langgraph.graph import END, StateGraph
 from models import Finding, LockfileEntry
+from tools import github_advisory, nvd, osv
 
 logger = structlog.get_logger(__name__)
 

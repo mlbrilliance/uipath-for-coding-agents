@@ -3,6 +3,8 @@ name: architect
 description: Build-fleet pattern selector. Reads a PDD with low ambiguity (status `ready-for-architect`) and writes an Architecture Decision Record specifying which UiPath pattern to use — Sequence, REFramework Performer, REFramework Dispatcher, Coded Workflow (C#), Coded Agent (LangGraph / OpenAI Agents / LlamaIndex), Maestro, Action Center, API Workflow, or Document Understanding. Use this agent after Analyst (or Interviewer) sets a candidate to `ready-for-architect`. Architect is the only agent that picks patterns; Conductor never invokes a Forger directly.
 tools: Read, Write, Edit, Glob, Grep
 model: opus
+fleet: build
+model_tier: high_stakes
 ---
 
 You are **Architect** — the swarm's pattern decision-maker. You produce one ADR per candidate. Your output gates the entire Build fleet.
@@ -57,7 +59,7 @@ Composition (when Maestro):
 
 ## Test strategy
 - Test Manager: 12 cases (4 per severity bucket × 3 happy/edge/error)
-- Local validation: `uip run` per Forger output before merge
+- Local validation: `uipath run` per Forger output before merge
 
 ## HITL gates that will fire
 - prod_publish (always)
@@ -101,3 +103,5 @@ A one-line summary:
 ```
 architect: CAND-… → Maestro (4 forgers, 3 skills, 12 tests, 2 gates)
 ```
+
+Done when the ADR is committed and the one-line summary is emitted — then hand off to Conductor, which dispatches the listed Forgers and Cartographer in parallel.

@@ -9,19 +9,49 @@ import time
 from pathlib import Path
 
 import pytest
+from aurora import auth
 from pytest_httpx import HTTPXMock  # type: ignore[import-not-found]
 
-from aurora import auth
+
+def test_derive_identity_endpoint_cloud_uipath_uses_account_level_path() -> None:
+    """Cloud (cloud.uipath.com) puts /identity_ at the host root, NOT at
+    the tenant root. Verified against the OpenID-discovery doc at
+    https://cloud.uipath.com/identity_/.well-known/openid-configuration
+    which advertises token_endpoint = https://cloud.uipath.com/identity_/connect/token.
+    Earlier implementation produced /webfiji/DefaultTenant/identity_/...
+    which 404s in production."""
+    url = "https://cloud.uipath.com/webfiji/DefaultTenant/orchestrator_"
+    assert (
+        auth.derive_identity_endpoint(url)
+        == "https://cloud.uipath.com/identity_/connect/token"
+    )
 
 
-def test_derive_identity_endpoint_strips_orchestrator_suffix() -> None:
-    url = "https://cloud.uipath.com/acct/tenant/orchestrator_"
-    assert auth.derive_identity_endpoint(url) == "https://cloud.uipath.com/acct/tenant/identity_/connect/token"
+def test_derive_identity_endpoint_cloud_no_orchestrator_suffix() -> None:
+    """Even without the /orchestrator_ suffix, cloud must collapse to host."""
+    url = "https://cloud.uipath.com/webfiji/DefaultTenant"
+    assert (
+        auth.derive_identity_endpoint(url)
+        == "https://cloud.uipath.com/identity_/connect/token"
+    )
 
 
-def test_derive_identity_endpoint_handles_no_suffix() -> None:
-    url = "https://cloud.uipath.com/acct/tenant"
-    assert auth.derive_identity_endpoint(url) == "https://cloud.uipath.com/acct/tenant/identity_/connect/token"
+def test_derive_identity_endpoint_self_hosted_strips_orchestrator() -> None:
+    """Self-hosted UiPath puts /identity_ as a sibling of /orchestrator_
+    under the same host/tenant prefix."""
+    url = "https://uipath.acme.local/orchestrator_"
+    assert (
+        auth.derive_identity_endpoint(url)
+        == "https://uipath.acme.local/identity_/connect/token"
+    )
+
+
+def test_derive_identity_endpoint_self_hosted_with_tenant_path() -> None:
+    url = "https://uipath.acme.local/AcmeTenant/orchestrator_"
+    assert (
+        auth.derive_identity_endpoint(url)
+        == "https://uipath.acme.local/AcmeTenant/identity_/connect/token"
+    )
 
 
 def test_token_needs_refresh_when_close_to_expiry() -> None:

@@ -67,7 +67,7 @@ Three fleets plus a Conductor. They run **concurrently, not sequentially**.
 
 ## When to use which skill
 
-Seven official UiPath skills (installed via `uip skills install`) and ten AURORA skills (in `skills/`). Pick the right one:
+Seven official UiPath skills (installed via `uipath skills install`) and ten AURORA skills (in `skills/`). Pick the right one:
 
 | Task | Skill |
 |---|---|
@@ -105,7 +105,7 @@ Hooks handle injection — don't read memory manually. `pre-tool-load-memory.sh`
 
 Two distinct authentications — don't mix them up:
 
-- **UiPath**: OAuth client-credentials via the External Application registered in Automation Cloud. Skill `aurora-auth` mints and refreshes tokens, reading `UIPATH_CLIENT_ID` + `UIPATH_CLIENT_SECRET` from `.env`. Writes the live access token to `UIPATH_ACCESS_TOKEN` so the `uip` CLI works without re-auth.
+- **UiPath**: OAuth client-credentials via the External Application registered in Automation Cloud. Skill `aurora-auth` mints and refreshes tokens, reading `UIPATH_CLIENT_ID` + `UIPATH_CLIENT_SECRET` from `.env`. Writes the live access token to `UIPATH_ACCESS_TOKEN` so the `uipath` CLI works without re-auth.
 - **Claude**: subscription OAuth via `~/.claude/credentials.json`. Run `claude login` once on the VPS. Both Claude Code (Build fleet) and the Claude Agent SDK (Operate-fleet daemons) read this file.
 
 There is no `ANTHROPIC_API_KEY`. Don't introduce one.
@@ -122,7 +122,7 @@ There is no `ANTHROPIC_API_KEY`. Don't introduce one.
 8. `tester` writes Test Manager cases from the seed's acceptance criteria.
 9. `reviewer` lints, blocks merge on red.
 10. `conductor` invokes `aurora-promote` for the prod gate. `concierge` creates the Action Center task and waits.
-11. On approval, deploy via `uip publish`.
+11. On approval, deploy via `uipath publish`.
 12. `sentry` watches the live process. `diagnostician` clusters failures. `surgeon` opens PRs. `auditor` checks drift.
 13. Nightly: `conductor` runs the compost step — composes a PR against `skills/` based on the day's `learnings.jsonl`.
 

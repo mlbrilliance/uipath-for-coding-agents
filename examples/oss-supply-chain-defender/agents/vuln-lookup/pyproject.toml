@@ -1,7 +1,7 @@
 [project]
 name = "aurora-vuln-lookup"
 version = "0.1.0"
-description = "AURORA Coded Agent: cross-references lockfile dependencies against NVD, OSV, and GitHub Advisory; emits structured findings."
+description = "AURORA Coded Agent — cross-references lockfile dependencies against NVD, OSV, and GitHub Advisory and emits structured findings."
 authors = [{ name = "AURORA Forger-Agent (autogen)", email = "puneetsatyawan@gmail.com" }]
 requires-python = ">=3.11"
 

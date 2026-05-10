@@ -1,0 +1,32 @@
+{
+  "_doc": "Three backlog candidates spanning AURORA's three fleets. Each carries a target chain (the specialists the work touches) and metadata flags the planner reads for worktree + gate decisions. The planner is responsible for inserting `conductor` between any two adjacent agents from different fleets — these chains intentionally cross fleet boundaries so invariant 1 has something to assert against.",
+  "candidates": [
+    {
+      "id": "C-001-friction-signal",
+      "kind": "friction_signal",
+      "source": "discovery",
+      "target_chain": ["scout", "curator", "analyst"],
+      "requires_worktree": false
+    },
+    {
+      "id": "C-002-vuln-finding",
+      "kind": "vuln_finding",
+      "source": "operate",
+      "target_chain": [
+        "analyst",
+        "architect",
+        "forger-coded",
+        "reviewer",
+        "tester"
+      ],
+      "requires_worktree": true
+    },
+    {
+      "id": "C-003-self-heal",
+      "kind": "fault_event",
+      "source": "operate",
+      "target_chain": ["sentry", "diagnostician", "surgeon"],
+      "requires_worktree": true
+    }
+  ]
+}

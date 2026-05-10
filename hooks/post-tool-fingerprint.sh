@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-AURORA_HOME="${AURORA_HOME:-/opt/aurora}"
+AURORA_HOME="${AURORA_HOME:-${HOME}/.aurora}"
 LOG="${AURORA_HOME}/hooks.log"
 EVENTS="${AURORA_HOME}/events.jsonl"
 LEARNINGS_DIR="${AURORA_HOME}/learnings"
@@ -24,11 +24,33 @@ if [[ -z "${EVENT}" ]]; then
     exit 0
 fi
 
-# Parse the event
+# Parse the event.
+#
+# Claude Code's PostToolUse payload (verified against
+# tests/lint/fixtures/hooks/posttooluse_*.json) carries:
+#   .tool_name                          — tool id (Bash, Edit, Read, …)
+#   .tool_input                         — args the model passed
+#   .tool_response.isError              — canonical success/failure flag
+#   .tool_response.stderr               — Bash failure text
+#   .tool_response.text                 — text-shaped tool failure text
+#   .tool_response.stdout               — Bash success output
+#
+# The legacy `.result.*` and `.success` paths are kept as fallbacks so
+# synthetic fixtures that older test code feeds keep working.
 AGENT="$(echo "${EVENT}" | jq -r '.agent // .subagent // .invoker.name // "unknown"' 2>/dev/null || echo "unknown")"
-TOOL="$(echo "${EVENT}" | jq -r '.tool // .tool_name // "unknown"' 2>/dev/null || echo "unknown")"
-SUCCESS="$(echo "${EVENT}" | jq -r '.result.success // .success // true' 2>/dev/null || echo "true")"
-ERROR_MSG="$(echo "${EVENT}" | jq -r '.result.error // .error // ""' 2>/dev/null || echo "")"
+TOOL="$(echo "${EVENT}" | jq -r '.tool_name // .tool // "unknown"' 2>/dev/null || echo "unknown")"
+# isError is the canonical CC flag (true → failure). Map it onto our
+# legacy "success" boolean. If neither isError nor legacy keys are
+# present, default to success (most tool calls are successful).
+IS_ERROR="$(echo "${EVENT}" | jq -r '.tool_response.isError // empty' 2>/dev/null || echo "")"
+if [[ "${IS_ERROR}" == "true" ]]; then
+    SUCCESS="false"
+elif [[ "${IS_ERROR}" == "false" ]]; then
+    SUCCESS="true"
+else
+    SUCCESS="$(echo "${EVENT}" | jq -r '.result.success // .success // true' 2>/dev/null || echo "true")"
+fi
+ERROR_MSG="$(echo "${EVENT}" | jq -r '.tool_response.text // .tool_response.stderr // .tool_response.error // .result.error // .error // ""' 2>/dev/null || echo "")"
 PROJECT="$(echo "${EVENT}" | jq -r '.context.candidate // .context.project_id // ""' 2>/dev/null || echo "")"
 
 # 1. On failure, fingerprint
@@ -47,8 +69,10 @@ if [[ "${SUCCESS}" != "true" ]] && [[ -n "${ERROR_MSG}" ]]; then
         }')
     echo "${EVENT_PAYLOAD}" >> "${EVENTS}"
 
+    # `-f` (not `-x`): we invoke via `python3 <path>` so +x is irrelevant.
+    # Using `-x` here was masking the bug where the script shipped without +x.
     FP_BIN="${CLAUDE_PROJECT_DIR:-.}/skills/aurora-fingerprint/scripts/cluster.py"
-    if [[ -x "${FP_BIN}" ]]; then
+    if [[ -f "${FP_BIN}" ]]; then
         TMP="$(mktemp)"
         echo "${EVENT_PAYLOAD}" > "${TMP}"
         python3 "${FP_BIN}" classify --event-file "${TMP}" >> "${LOG}" 2>&1 || true
@@ -56,8 +80,10 @@ if [[ "${SUCCESS}" != "true" ]] && [[ -n "${ERROR_MSG}" ]]; then
     fi
 fi
 
-# 2. On any tool call, look for an explicit learning line in the agent output
-LEARNING="$(echo "${EVENT}" | jq -r '.result.output // .output // ""' 2>/dev/null | grep -E '^learning:' | head -1 || echo "")"
+# 2. On any tool call, look for an explicit learning line in the agent output.
+# CC's tool_response shape varies by tool; check the common stdout/text fields,
+# falling back to legacy paths.
+LEARNING="$(echo "${EVENT}" | jq -r '.tool_response.stdout // .tool_response.text // .tool_response.output // .result.output // .output // ""' 2>/dev/null | grep -E '^learning:' | head -1 || echo "")"
 if [[ -n "${LEARNING}" ]]; then
     SUMMARY="${LEARNING#learning:}"
     SUMMARY="${SUMMARY# }"

@@ -1,0 +1,16 @@
+{
+  "process": "SampleProcess",
+  "folder": "AURORA-Test",
+  "tasks": {
+    "FetchData": {
+      "kind": "coded-workflow",
+      "package": "AuroraSample",
+      "entry": "Sample.FetchData"
+    },
+    "ApproveAction": {
+      "kind": "action-center-form",
+      "catalog": "aurora_test_approvals",
+      "form_template": "skills/aurora-promote/templates/sample.json"
+    }
+  }
+}

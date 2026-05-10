@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity x:Class="GitHub_Login"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <x:Members>
+    <x:Property Name="in_strUsername" Type="InArgument(x:String)" />
+    <x:Property Name="in_secPassword" Type="InArgument(s:SecureString)" />
+    <x:Property Name="out_boolLoggedIn" Type="OutArgument(x:Boolean)" />
+  </x:Members>
+
+  <Sequence DisplayName="GitHub_Login">
+    <ui:LogMessage Level="Info" Message="Starting GitHub_Login" />
+    <ui:GetRobotCredential AssetName="GitHubToken" />
+    <ui:LogMessage Level="Info" Message="Completed GitHub_Login" />
+  </Sequence>
+</Activity>

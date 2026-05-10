@@ -13,9 +13,8 @@ import json
 import logging
 import os
 import signal
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from aurora.fingerprint import classify_event
 from aurora.memory import MemoryStore
@@ -29,9 +28,9 @@ class Sentry:
     def __init__(
         self,
         *,
-        client: Optional[UiPathClient] = None,
-        store: Optional[MemoryStore] = None,
-        interval_seconds: Optional[int] = None,
+        client: UiPathClient | None = None,
+        store: MemoryStore | None = None,
+        interval_seconds: int | None = None,
     ):
         self.policy, _ = load_policy()
         self.client = client or UiPathClient(folder=self.policy.folder)
@@ -48,7 +47,7 @@ class Sentry:
         while not self._stop.is_set():
             try:
                 await self._tick()
-            except Exception as exc:  # noqa: BLE001 — daemon must not die on a transient error
+            except Exception as exc:
                 logger.exception("sentry: tick failed: %s", exc)
                 self._emit({
                     "ts": _now_iso(),
@@ -58,14 +57,14 @@ class Sentry:
                 })
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self.interval)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         logger.info("sentry: stopped")
 
     async def _tick(self) -> None:
         # Run synchronous SDK calls in a thread to keep the loop responsive
         loop = asyncio.get_running_loop()
-        failed = await loop.run_in_executor(None, self.client.list_failed_jobs, 5)
+        failed = await loop.run_in_executor(None, lambda: self.client.list_failed_jobs(since_minutes=5))
         for job in failed:
             self._emit_job_fault(job)
 
@@ -77,22 +76,22 @@ class Sentry:
             )
             for inst in faulted:
                 self._emit_maestro_fault(inst)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass  # endpoint may not be available in older tenants
 
     # ---------- emitters ----------
 
-    def _emit(self, event: dict) -> None:
+    def _emit(self, event: dict[str, Any]) -> None:
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, separators=(",", ":")) + "\n")
         # Cluster on the way through so Diagnostician can read fingerprints later
         if event.get("kind", "").endswith("_failed") or event.get("kind", "").endswith("_faulted"):
             try:
                 classify_event(event)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("sentry: classify_event failed for %s", event.get("kind"))
 
-    def _emit_job_fault(self, job: dict) -> None:
+    def _emit_job_fault(self, job: dict[str, Any]) -> None:
         self._emit({
             "ts": _now_iso(),
             "kind": "job_failed",
@@ -110,7 +109,7 @@ class Sentry:
             },
         })
 
-    def _emit_maestro_fault(self, inst: dict) -> None:
+    def _emit_maestro_fault(self, inst: dict[str, Any]) -> None:
         self._emit({
             "ts": _now_iso(),
             "kind": "maestro_instance_faulted",
@@ -127,7 +126,7 @@ class Sentry:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ---------- entrypoint ----------

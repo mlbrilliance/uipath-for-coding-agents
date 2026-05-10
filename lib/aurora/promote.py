@@ -13,10 +13,10 @@ import logging
 import os
 import re
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, cast
 
 from aurora.uipath_client import UiPathClient
 
@@ -32,11 +32,11 @@ class GateResponse:
     task_id: int
     approved: bool
     decision: str
-    approver: Optional[str]
+    approver: str | None
     responded_at: str
-    form_data: dict
+    form_data: dict[str, Any]
     elapsed_seconds: int
-    escalated_to: Optional[str] = None
+    escalated_to: str | None = None
     timed_out: bool = False
 
 
@@ -47,14 +47,14 @@ class GateError(RuntimeError):
 def open_gate(
     *,
     kind: str,
-    candidate: Optional[str] = None,
-    context: Optional[dict] = None,
+    candidate: str | None = None,
+    context: dict[str, Any] | None = None,
     approvers_env: str = "AURORA_EMERGENCY_APPROVERS",
-    timeout_hours: Optional[int] = None,
-    on_timeout: Optional[str] = None,
-    catalog: Optional[str] = None,
+    timeout_hours: int | None = None,
+    on_timeout: str | None = None,
+    catalog: str | None = None,
     poll_interval: int = POLL_INTERVAL_SECONDS,
-    template_dir: Optional[Path] = None,
+    template_dir: Path | None = None,
 ) -> GateResponse:
     """Create an Action Center Form Task and wait for completion."""
     context = context or {}
@@ -88,7 +88,10 @@ def open_gate(
         data={"context": context, "candidate": candidate, "kind": kind},
         approver_user_ids=approver_user_ids,
     )
-    task_id = int(task.get("Id") or task.get("id"))
+    task_id_raw = task.get("Id") or task.get("id")
+    if task_id_raw is None:
+        raise GateError(f"FormTask response missing Id/id: {task!r}")
+    task_id = int(task_id_raw)
     started_at = time.time()
     timeout_at = started_at + (timeout_hours * 3600)
     logger.info("opened gate kind=%s task=%s timeout=%dh", kind, task_id, timeout_hours)
@@ -108,7 +111,7 @@ def open_gate(
                 approver=current.get("LastModifiedBy", {}).get("EmailAddress")
                          if isinstance(current.get("LastModifiedBy"), dict)
                          else None,
-                responded_at=datetime.now(timezone.utc).isoformat(),
+                responded_at=datetime.now(UTC).isoformat(),
                 form_data=data,
                 elapsed_seconds=int(time.time() - started_at),
             )
@@ -130,38 +133,38 @@ def _handle_timeout(
         logger.warning("gate %s timed out — policy says auto-approve", kind)
         return GateResponse(
             task_id=task_id, approved=True, decision="auto-approve",
-            approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+            approver=None, responded_at=datetime.now(UTC).isoformat(),
             form_data={}, elapsed_seconds=elapsed, timed_out=True,
         )
     if on_timeout == "deny":
         logger.warning("gate %s timed out — policy says deny", kind)
         return GateResponse(
             task_id=task_id, approved=False, decision="timeout-deny",
-            approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+            approver=None, responded_at=datetime.now(UTC).isoformat(),
             form_data={}, elapsed_seconds=elapsed, timed_out=True,
         )
     # escalate (default)
     logger.warning("gate %s timed out — escalating to backup approvers", kind)
     return GateResponse(
         task_id=task_id, approved=False, decision="escalated",
-        approver=None, responded_at=datetime.now(timezone.utc).isoformat(),
+        approver=None, responded_at=datetime.now(UTC).isoformat(),
         form_data={}, elapsed_seconds=elapsed, timed_out=True,
         escalated_to="<backup-approver-pool>",
     )
 
 
-def _load_template(kind: str, template_dir: Path) -> dict:
+def _load_template(kind: str, template_dir: Path) -> dict[str, Any]:
     candidates = [
         template_dir / f"{kind}.json",
         template_dir / f"{kind.replace('_', '-')}.json",
     ]
     for path in candidates:
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     raise GateError(f"no template for kind={kind!r}; looked in {[str(p) for p in candidates]}")
 
 
-def _render_placeholders(obj: Any, context: dict) -> Any:
+def _render_placeholders(obj: Any, context: dict[str, Any]) -> Any:
     if isinstance(obj, str):
         def repl(m: re.Match[str]) -> str:
             key = m.group(1)

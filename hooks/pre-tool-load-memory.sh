@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-AURORA_HOME="${AURORA_HOME:-/opt/aurora}"
+AURORA_HOME="${AURORA_HOME:-${HOME}/.aurora}"
 LOG="${AURORA_HOME}/hooks.log"
 mkdir -p "${AURORA_HOME}"
 
@@ -43,9 +43,12 @@ if [[ ! -d "${AURORA_HOME}" ]]; then
     exit 0
 fi
 
-# Use the recall skill to fetch a scoped slice; capture stdout
+# Use the recall skill to fetch a scoped slice; capture stdout.
+# `-f` (not `-x`): we invoke via `python3 <path>` so the +x bit is irrelevant.
+# Using `-x` here was masking the bug where skill scripts shipped without +x —
+# the hook would silently exit 0 instead of running the recall pipeline.
 RECALL_BIN="${CLAUDE_PROJECT_DIR:-.}/skills/aurora-recall/scripts/recall.py"
-if [[ ! -x "${RECALL_BIN}" ]]; then
+if [[ ! -f "${RECALL_BIN}" ]]; then
     # Recall script may not exist yet during early bootstrap — silent skip
     exit 0
 fi

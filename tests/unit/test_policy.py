@@ -5,9 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from aurora import policy as policy_mod
-
 
 # A minimal valid policy used as a baseline; tests mutate copies.
 VALID_POLICY: dict = {

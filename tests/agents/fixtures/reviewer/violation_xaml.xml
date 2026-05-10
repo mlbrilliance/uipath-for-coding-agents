@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity x:Class="GitHub_LoginBad"
+          xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+          xmlns:ui="http://schemas.uipath.com/workflow/activities"
+          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <x:Members>
+    <x:Property Name="in_strUsername" Type="InArgument(x:String)" />
+    <!-- R.X.01 violation: password as plain String, not SecureString -->
+    <x:Property Name="in_strPassword" Type="InArgument(x:String)" />
+    <x:Property Name="out_boolLoggedIn" Type="OutArgument(x:Boolean)" />
+  </x:Members>
+
+  <Sequence DisplayName="GitHub_LoginBad">
+    <ui:LogMessage Level="Info" Message="login (insecure)" />
+  </Sequence>
+</Activity>

@@ -1,0 +1,14 @@
+{
+  "id": "scout-1d8f3a4b2c5e",
+  "source": "slack:#rpa-asks",
+  "ts": "2026-05-09T14:23:00Z",
+  "raw": "every Monday I spend 2 hours pulling vendor invoices from SharePoint by hand",
+  "signal": {
+    "actor": "U07ABCDEFG",
+    "frequency_hint": "weekly",
+    "duration_hint": "2 hours",
+    "pain_indicators": ["spend", "every", "by hand"],
+    "system_hints": ["SharePoint", "vendor invoices"],
+    "pain_hint": "manual SharePoint copy-paste"
+  }
+}

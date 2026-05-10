@@ -3,7 +3,26 @@
   "process": "OssSupplyChainDefender",
   "folder": "AURORA-Demo",
   "version": "0.1.0",
-  "description": "Maps BPMN task IDs in process.bpmn to deployed UiPath packages, agents, and Action Center forms. Read by `uipath-platform` skill at deploy time.",
+  "description": "Maps BPMN task IDs in process.bpmn to deployed UiPath packages, agents, and Action Center forms; carries every binding-time piece of metadata that used to live as <uipath:*> extension elements inside process.bpmn. Read by `uipath-platform` skill at deploy time. See docs/grill-2026-05-09.md (D1) for the rationale.",
+  "variables": {
+    "GitHubOrg": { "type": "string", "default": "aurora-demo-org" },
+    "ScanScope": { "type": "array<string>", "default": ["*"] },
+    "SeverityFloor": { "type": "number", "default": 0.0 },
+    "DigestChannel": { "type": "string", "default": "${SLACK_CHANNEL_ID}" },
+    "EmergencyApprovers": { "type": "array<string>", "default": ["${AURORA_EMERGENCY_APPROVERS}"] },
+    "lockfiles": { "type": "object", "scope": "runtime" },
+    "vuln_findings": { "type": "object", "scope": "runtime" },
+    "maintainer_score": { "type": "number", "scope": "runtime" },
+    "typosquat_suspects": { "type": "array<object>", "scope": "runtime" },
+    "license_conflicts": { "type": "object", "scope": "runtime" },
+    "severity": { "type": "string", "scope": "runtime" },
+    "approval_decision": { "type": "string", "scope": "runtime" },
+    "triage_summary": { "type": "string", "scope": "runtime" },
+    "proposed_diff": { "type": "object", "scope": "runtime" },
+    "pr_url": { "type": "string", "scope": "runtime" },
+    "ci_result": { "type": "string", "scope": "runtime" },
+    "merge_action": { "type": "string", "scope": "runtime" }
+  },
   "messageDefinitions": {
     "github-checks-completed": {
       "description": "Emitted by a GitHub webhook handler when CI completes on a PR opened by AURORA",
@@ -18,7 +37,11 @@
       "entry": "GitHub.ResolveLockfiles",
       "language": "csharp",
       "timeout_seconds": 120,
-      "retry_policy": { "max_attempts": 3, "delay_seconds": 5 }
+      "retry_policy": { "max_attempts": 3, "delay_seconds": 5 },
+      "io": {
+        "inputs":  { "org":   "GitHubOrg", "scope": "ScanScope" },
+        "outputs": { "lockfiles": "lockfiles" }
+      }
     },
     "VulnLookup": {
       "kind": "coded-agent",
@@ -26,7 +49,11 @@
       "framework": "langgraph",
       "entry": "main:main",
       "model_binding_tier": "mid_stakes",
-      "timeout_seconds": 600
+      "timeout_seconds": 600,
+      "io": {
+        "inputs":  { "lockfiles": "lockfiles" },
+        "outputs": { "findings": "vuln_findings" }
+      }
     },
     "MaintainerHealth": {
       "kind": "coded-agent",
@@ -34,21 +61,48 @@
       "framework": "openai-agents",
       "entry": "main:main",
       "model_binding_tier": "mid_stakes",
-      "timeout_seconds": 300
+      "timeout_seconds": 300,
+      "io": {
+        "inputs":  { "lockfiles": "lockfiles" },
+        "outputs": { "maintainer_score": "maintainer_score" }
+      }
     },
     "TyposquatCheck": {
       "kind": "coded-workflow",
       "package": "AuroraSupplyChainDefender",
       "entry": "Typosquat.CheckLockfiles",
       "language": "csharp",
-      "timeout_seconds": 180
+      "timeout_seconds": 180,
+      "io": {
+        "inputs":  { "lockfiles": "lockfiles" },
+        "outputs": { "suspects": "typosquat_suspects" }
+      }
     },
     "LicenseDrift": {
       "kind": "rpa-package",
       "package": "AuroraSupplyChainDefender",
       "entry": "License/CheckLicenseDrift",
       "language": "xaml",
-      "timeout_seconds": 240
+      "timeout_seconds": 240,
+      "io": {
+        "inputs":  { "lockfiles": "lockfiles" },
+        "outputs": { "conflicts": "license_conflicts" }
+      }
+    },
+    "ScoreSeverity": {
+      "kind": "dmn",
+      "decision_ref": "severity-matrix",
+      "decision_file": "decisions/severity-matrix.dmn",
+      "io": {
+        "inputs": {
+          "cvss":             "vuln_findings.max_cvss",
+          "exploitInWild":    "vuln_findings.has_known_exploit",
+          "depDepth":         "vuln_findings.shallowest_depth",
+          "maintainerHealth": "maintainer_score",
+          "licenseRisk":      "license_conflicts.has_conflict"
+        },
+        "outputs": { "severity": "severity" }
+      }
     },
     "Triage": {
       "kind": "coded-agent",
@@ -56,61 +110,110 @@
       "framework": "langgraph",
       "entry": "main:triage",
       "model_binding_tier": "high_stakes",
-      "timeout_seconds": 300
+      "timeout_seconds": 300,
+      "io": {
+        "inputs":  { "findings": "vuln_findings" },
+        "outputs": { "triage_summary": "triage_summary", "proposed_diff": "proposed_diff" }
+      }
     },
     "ApproveEmergencyPatch": {
       "kind": "action-center-form",
       "catalog": "aurora_supply_chain_approvals",
       "form_template": "skills/aurora-promote/templates/emergency-patch.json",
+      "approvers_var": "EmergencyApprovers",
       "approvers_env": "AURORA_EMERGENCY_APPROVERS",
       "timeout_hours": 4,
-      "on_timeout": "escalate"
+      "on_timeout": "escalate",
+      "io": {
+        "inputs":  { "triage_summary": "triage_summary", "diff_url": "proposed_diff.url" },
+        "outputs": { "decision": "approval_decision" }
+      }
     },
     "EscalateApproval": {
       "kind": "action-center-form",
       "catalog": "aurora_supply_chain_approvals",
       "form_template": "skills/aurora-promote/templates/emergency-patch.json",
+      "approvers_pool": "backup-pool",
       "approvers_env": "AURORA_BACKUP_APPROVERS"
     },
     "OpenPatchPR": {
       "kind": "coded-workflow",
       "package": "AuroraSupplyChainDefender",
       "entry": "GitHub.OpenPatchPR",
-      "language": "csharp"
+      "language": "csharp",
+      "io": {
+        "inputs":  { "findings": "vuln_findings", "diff": "proposed_diff" },
+        "outputs": { "pr_url": "pr_url" }
+      }
+    },
+    "PostPendingComment": {
+      "kind": "coded-workflow",
+      "package": "AuroraSupplyChainDefender",
+      "entry": "GitHub.PostPendingComment.PostPendingComment",
+      "language": "csharp",
+      "timeout_seconds": 60,
+      "retry_policy": { "max_attempts": 3, "delay_seconds": 5 },
+      "io": {
+        "inputs":  { "repoFullName": "pr_url", "pullNumber": "proposed_diff.pull_number" },
+        "outputs": { "commentMarker": "ci_comment_marker" }
+      }
     },
     "WaitForCI": {
-      "kind": "message-receive",
+      "kind": "message-catch",
       "message": "github-checks-completed",
-      "correlation_key_var": "pr_url",
-      "timeout_seconds": 1800
+      "correlation_key_var": "pr_url"
     },
     "AutoMerge": {
       "kind": "dmn",
       "decision_ref": "auto-merge-policy",
-      "decision_file": "decisions/auto-merge-policy.dmn"
+      "decision_file": "decisions/auto-merge-policy.dmn",
+      "io": {
+        "inputs":  {
+          "severity":     "severity",
+          "ciResult":     "ci_result",
+          "filesTouched": "proposed_diff.files_touched"
+        },
+        "outputs": { "action": "merge_action" }
+      }
     },
     "Notify": {
       "kind": "coded-workflow",
       "package": "AuroraSupplyChainDefender",
-      "entry": "Notify.SendDigest"
+      "entry": "Notify.SendDigest",
+      "io": {
+        "inputs": { "channel": "DigestChannel", "payload": "merge_action" }
+      }
     },
     "OpenAutoPR": {
       "kind": "coded-workflow",
       "package": "AuroraSupplyChainDefender",
-      "entry": "GitHub.OpenAutoPR"
+      "entry": "GitHub.OpenAutoPR",
+      "io": {
+        "inputs":  { "findings": "vuln_findings" },
+        "outputs": { "pr_url": "pr_url" }
+      }
     },
     "BatchDigest": {
       "kind": "coded-workflow",
       "package": "AuroraSupplyChainDefender",
-      "entry": "Notify.AppendToDigest"
+      "entry": "Notify.AppendToDigest",
+      "io": {
+        "inputs": { "findings": "vuln_findings" }
+      }
     },
     "LogOnly": {
       "kind": "script",
-      "language": "javascript"
+      "language": "javascript",
+      "script": "audit.append({ severity: severity, count: vuln_findings.length, ts: new Date().toISOString() });"
     }
   },
   "decisions": {
     "severity-matrix": "decisions/severity-matrix.dmn",
     "auto-merge-policy": "decisions/auto-merge-policy.dmn"
+  },
+  "endEvents": {
+    "End_RunComplete": {
+      "emit_to_insights": { "metric": "oss_supply_chain_run" }
+    }
   }
 }
