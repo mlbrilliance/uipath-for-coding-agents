@@ -71,6 +71,8 @@ End-to-end instance tests under `Tests/Maestro/<Process>_<Scenario>.json`:
 }
 ```
 
+Test scaffolds and command flags trace back to the official UiPath skills the relevant Forger used: `uipath-rpa-workflows` for XAML cases, `uipath-coded-workflows` for C# cases, `uipath-coded-agents` for Output Evaluator suites, and `uipath-platform` for the Studio publish step. Read the matching `SKILL.md` before generating cases for that surface.
+
 ## How you run
 
 Locally first, before pushing to Test Manager:
