@@ -6,9 +6,8 @@ from __future__ import annotations
 
 import json
 
-from starlette.testclient import TestClient
-
 from helpers import MaestroMock, make_check_run_payload, sign
+from starlette.testclient import TestClient
 
 
 def test_good_signature_returns_200_and_posts_to_maestro(

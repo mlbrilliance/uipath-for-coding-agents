@@ -134,6 +134,11 @@ routing:
     scout:           continuous
     concierge:       continuous
 
+# Webhook endpoints — external bridges into AURORA
+webhook:
+  github_check_run:
+    url: ${AURORA_WEBHOOK_GITHUB_CHECK_RUN_URL}
+
 # Cost guardrails
 budget:
   daily_usd: ${AURORA_DAILY_BUDGET_USD}

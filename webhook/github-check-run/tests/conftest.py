@@ -19,7 +19,6 @@ sys.path.insert(0, _tests_dir)
 
 from helpers import MaestroMock, make_check_run_payload, sign  # noqa: E402
 
-
 # ── Fixtures ──────────────────────────────────────────────────────
 
 
