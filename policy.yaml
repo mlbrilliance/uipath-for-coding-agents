@@ -69,6 +69,8 @@ operate:
   surgeon:
     max_auto_fixes_per_day: ${AURORA_MAX_AUTO_FIXES_PER_DAY}
     max_workflows_touched_without_hitl: 3
+  maestro:
+    waitforci_timeout_iso8601: PT4H
 
 # Cross-cutting HITL gates — never bypass
 gates:

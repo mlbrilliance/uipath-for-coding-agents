@@ -28,6 +28,7 @@ EXECUTABLE_TASK_TYPES = {
     "businessRuleTask",
     "sendTask",
     "receiveTask",
+    "intermediateCatchEvent",
 }
 
 
@@ -71,24 +72,36 @@ def test_no_orphan_bindings() -> None:
 
 
 def test_message_definitions_match_receive_tasks() -> None:
-    """Every receiveTask referencing a message must have it defined."""
+    """Every receiveTask or intermediateCatchEvent referencing a message must
+    have it defined in bindings.json::messageDefinitions."""
     tree = ET.parse(PROCESS_BPMN)
-    receive_ids = [
-        elem.get("id")
-        for elem in tree.iter("{" + BPMN_NS + "}receiveTask")
-    ]
-    if not receive_ids:
-        return  # no receive tasks; trivially satisfied
+    bpmn_ns = "{" + BPMN_NS + "}"
+    msg_refs: list[str] = []
+
+    for elem in tree.iter():
+        if not elem.tag.startswith(bpmn_ns):
+            continue
+        local = elem.tag.split("}", 1)[1]
+        if local in ("receiveTask", "intermediateCatchEvent"):
+            msg_def = elem.find(bpmn_ns + "messageEventDefinition")
+            if msg_def is not None:
+                ref = msg_def.get("messageRef")
+                if ref:
+                    msg_refs.append(ref)
+
     data = json.loads(BINDINGS.read_text(encoding="utf-8"))
     msg_defs = data.get("messageDefinitions", {})
     tasks = data.get("tasks", {})
-    for rid in receive_ids:
-        binding = tasks.get(rid, {})
-        if binding.get("kind") != "message-receive":
+
+    for tid in [elem.get("id") for elem in tree.iter() if elem.tag.split("}", 1)[-1] in ("receiveTask", "intermediateCatchEvent")]:
+        if tid is None:
+            continue
+        binding = tasks.get(tid, {})
+        if binding.get("kind") not in ("message-receive", "message-catch"):
             continue
         msg = binding.get("message")
         assert msg in msg_defs, (
-            f"receiveTask {rid} references message '{msg}' not defined "
+            f"{tid} references message '{msg}' not defined "
             f"in bindings.json::messageDefinitions"
         )
 
