@@ -105,7 +105,7 @@ try:
         project_dir=project_dir,
         version_bump="patch",
     )
-except BusinessException:
+except BusinessError:
     # HTTP rail failed — fall back to UI
     result = publish_via_ui(
         project_dir=project_dir,
@@ -157,7 +157,7 @@ These are extracted for testability (R.K.01):
 
 | HTTP status | Behaviour | Convention |
 |---|---|---|
-| 4xx | Raise `BusinessException` immediately | R.E.03 |
+| 4xx | Raise `BusinessError` immediately | R.E.03 |
 | 5xx | Retry up to 3x with exponential backoff | R.E.02 |
 | Network error | Retry up to 3x | R.E.01 |
 | Success | Parse response via `_parse_publish_response` | — |

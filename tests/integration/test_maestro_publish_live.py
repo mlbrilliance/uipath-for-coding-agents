@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 import pytest
-from aurora.uipath_client import BusinessException, UiPathClient
+from aurora.uipath_client import BusinessError, UiPathClient
 
 pytestmark = pytest.mark.integration
 
@@ -39,5 +39,5 @@ def test_publish_maestro_project_noop_bump(integration_check: None) -> None:
         )
         assert "version" in result
         assert isinstance(result["version"], str)
-    except BusinessException as exc:
+    except BusinessError as exc:
         pytest.skip(f"publish endpoint returned 4xx (expected if project doesn't exist): {exc}")

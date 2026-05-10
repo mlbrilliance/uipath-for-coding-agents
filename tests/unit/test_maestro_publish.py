@@ -90,11 +90,11 @@ def test_publish_request_has_required_headers(httpx_mock: pytest.HTTPXMock, monk
 
 
 # ---------------------------------------------------------------------------
-# 3. 4xx → BusinessException (not retried)
+# 3. 4xx → BusinessError (not retried)
 # ---------------------------------------------------------------------------
 
 def test_publish_handles_4xx_with_business_exception(httpx_mock: pytest.HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
-    """4xx → BusinessException with status code; not retried (per R.E.03)."""
+    """4xx → BusinessError with status code; not retried (per R.E.03)."""
     httpx_mock.add_response(
         url=PUBLISH_URL,
         status_code=403,

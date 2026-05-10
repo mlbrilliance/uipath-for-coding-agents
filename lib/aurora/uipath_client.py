@@ -260,7 +260,7 @@ class UiPathClient:
                 continue
 
             if r.status_code >= 400:
-                raise BusinessException(
+                raise BusinessError(
                     f"HTTP {r.status_code} from publish endpoint: {r.text[:200]}"
                 )
 
@@ -306,7 +306,7 @@ def _iso_minutes_ago(n: int) -> str:
     return (datetime.now(UTC) - timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-class BusinessException(RuntimeError):
+class BusinessError(RuntimeError):
     """Non-retryable business-logic error (4xx from UiPath APIs)."""
 
 

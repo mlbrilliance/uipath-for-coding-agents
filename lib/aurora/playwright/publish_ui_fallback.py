@@ -19,7 +19,6 @@ or as a fallback when the HTTP wrapper raises.
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 from pathlib import Path
@@ -57,7 +56,6 @@ def publish_via_ui(
         )
 
     studio_url = STUDIO_WEB_URL_TEMPLATE.format(account=account, tenant=tenant)
-    result: dict[str, Any] = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)

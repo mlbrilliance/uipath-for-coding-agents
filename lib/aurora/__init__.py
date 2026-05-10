@@ -31,11 +31,11 @@ from aurora.memory import MemoryStore
 from aurora.policy import AuroraPolicy, load_policy, validate_policy
 from aurora.promote import open_gate
 from aurora.recall import recall
-from aurora.uipath_client import BusinessException
+from aurora.uipath_client import BusinessError
 
 __all__ = [
     "AuroraPolicy",
-    "BusinessException",
+    "BusinessError",
     "MemoryStore",
     "__version__",
     "append_resolution",
