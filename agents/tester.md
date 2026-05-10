@@ -88,14 +88,46 @@ aurora test maestro --process OssSupplyChainDefender --scenario all
 
 If anything fails, write to `.aurora/projects/<cand-id>/tester-report.md` and bounce status to `ready-for-tester` with notes — Conductor re-dispatches the relevant Forger.
 
-When all green, publish the Studio test package to Orchestrator — Test Manager picks it up via the documented Select-Automation linkage, not a direct API publish (see docs/grill-2026-05-09.md §Contradicted #5; T-E1 owns the full flow):
+## Publish + link (the Studio → Orchestrator → Test Manager flow)
+
+**Test Manager has no documented "publish a test set" write API.** Don't claim otherwise. The supported flow is two distinct steps with two distinct rails:
+
+1. **Publish** — Studio packs and pushes the test package to Orchestrator.
+2. **Link** — Test Manager picks up the published package via the documented Select-Automation linkage call. This step is a *sync*, not a *publish*: it ties an Orchestrator package to an existing Test Manager test case.
+
+When all tests are green, run the publish step with the standard CLI:
 
 ```bash
 uipath pack
 uipath publish --project <project-dir>
 ```
 
-And set status to `ready-for-deploy`.
+Then run the link step. AURORA automates it via `lib/aurora/test_manager.py`:
+
+```python
+from aurora.test_manager import TestManagerClient
+
+client = TestManagerClient()
+for case in client.list_test_cases(project_key="DEMO"):
+    client.link_automation(
+        test_case_id=case.id,
+        package_id="<package-id-from-uipath-publish>",
+        entry_point="Main.xaml",
+    )
+```
+
+`link_automation` is idempotent — re-running the same `(test_case_id, package_id)` pair is a no-op, so the Operate fleet can replay safely after a partial failure.
+
+If the API path rotates (UiPath has done this before), the Playwright fallback in `lib/aurora/playwright/test_manager_ui.py` clicks through the Test Manager "Select Automation" dialog with the same `(test_case_id, package_id, entry_point)` shape:
+
+```python
+from aurora.playwright.test_manager_ui import link_via_ui
+link_via_ui(test_case_id="TC-1", package_id="MyPackage", entry_point="Main.xaml")
+```
+
+The fallback is for human-in-the-loop / Operate use only — never run it from CI, and recapture the new API shape into the runbook at `docs/test-manager-linkage.md` so the API rail can be restored.
+
+When publish + link both succeed, set status to `ready-for-deploy`.
 
 ## Coverage rule
 
