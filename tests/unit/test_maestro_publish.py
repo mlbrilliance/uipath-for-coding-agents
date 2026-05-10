@@ -144,7 +144,12 @@ def test_publish_retries_on_5xx(httpx_mock: pytest.HTTPXMock, monkeypatch: pytes
 def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
     """publish_ui_fallback.py exposes a sync ``publish_via_ui(...)`` callable
     with the same signature as the HTTP wrapper. Mock playwright so no
-    browser opens."""
+    browser opens.
+
+    Skipped when playwright isn't installed in the test env (it's an
+    optional runtime dep — see pyproject.toml `[[tool.mypy.overrides]]`
+    note for `playwright.*`)."""
+    pytest.importorskip("playwright.sync_api")
     monkeypatch.setenv("UIPATH_ACCOUNT_SLUG", "test-acct")
     monkeypatch.setenv("UIPATH_TENANT_SLUG", "test-tenant")
 

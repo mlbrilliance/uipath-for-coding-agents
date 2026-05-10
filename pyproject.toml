@@ -93,6 +93,13 @@ warn_return_any = true
 module = "aurora.mcp.server"
 disable_error_code = ["untyped-decorator", "no-untyped-call"]
 
+# Playwright (used by lib/aurora/playwright/* — Maestro publish capture + UI
+# fallback) is an optional runtime dep; we don't require it in CI and ship no
+# stubs by default. Tests always mock it at the boundary.
+[[tool.mypy.overrides]]
+module = "playwright.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
