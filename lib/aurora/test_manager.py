@@ -29,6 +29,13 @@ import httpx
 
 from aurora.uipath_client import BusinessError
 
+__all__ = [
+    "BusinessError",
+    "LinkResult",
+    "TestCase",
+    "TestManagerClient",
+]
+
 logger = logging.getLogger(__name__)
 
 TEST_MANAGER_API_PATH_PREFIX = "/test_/api/v1"
@@ -40,6 +47,8 @@ LINK_TIMEOUT_SECONDS = 60
 @dataclass(frozen=True)
 class TestCase:
     """A Test Manager test case projection."""
+
+    __test__ = False  # not a pytest test class
 
     id: str
     name: str
@@ -68,6 +77,8 @@ class TestManagerClient:
     is optional; when set, every request includes the
     ``X-UIPATH-OrganizationUnitId`` header.
     """
+
+    __test__ = False  # not a pytest test class
 
     def __init__(
         self,
