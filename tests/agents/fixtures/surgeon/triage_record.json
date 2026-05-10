@@ -1,0 +1,15 @@
+{
+  "cluster_id": "selector-broken/wnd-aaname-mismatch/GitHub_FetchLockfile",
+  "root_cause": "SharePoint folder rename invalidated the cached selector.",
+  "fix_hypothesis": "Cartographer re-inspects the parent; Forger-RPA regenerates the workflow.",
+  "confidence": 0.78,
+  "auto_fix": true,
+  "workflow_paths_touched": [
+    "Workflows/GitHub/FetchLockfile.xaml"
+  ],
+  "regression_tests": [
+    "Tests/GitHub/FetchLockfile_HappyPath.xaml",
+    "Tests/GitHub/FetchLockfile_NotFound.xaml"
+  ],
+  "pr_number": 42
+}

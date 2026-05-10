@@ -1,0 +1,15 @@
+{
+  "cluster_id": "selector-broken/wnd-aaname-mismatch/GitHub_FetchLockfile",
+  "root_cause": "SharePoint folder rename caused the cached aaname='Inbox' selector to miss its target.",
+  "fix_hypothesis": "Re-inspect the parent screen, regenerate the selector with the new aaname, and rerun the regression.",
+  "cluster_size": 12,
+  "prior_resolutions": 3,
+  "base_confidence": 0.78,
+  "fingerprint_kind": "selector-broken",
+  "fingerprint_refinement": "wnd-aaname-mismatch",
+  "events": [
+    {"ts": "2026-05-09T03:42:11Z", "process": "OssSupplyChainDefender"},
+    {"ts": "2026-05-08T22:11:01Z", "process": "OssSupplyChainDefender"},
+    {"ts": "2026-05-08T18:00:25Z", "process": "OssSupplyChainDefender"}
+  ]
+}
