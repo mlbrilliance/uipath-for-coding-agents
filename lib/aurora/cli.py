@@ -107,7 +107,24 @@ def cmd_policy(args: argparse.Namespace) -> int:
             return 1
         for w in warnings:
             print(f"[aurora-policy] warning: {w}", file=sys.stderr)
+        live_failed = False
+        if args.live:
+            from aurora.policy_live import run_live_probes
+            print("[aurora-policy] running live probes (orchestrator, github, action-catalog)…")
+            probes = run_live_probes()
+            for f in probes.failures:
+                print(f"[aurora-policy] live: {f}", file=sys.stderr)
+            if not probes.all_ok:
+                live_failed = True
+                print(
+                    f"[aurora-policy] live probes: {sum([probes.orchestrator_ok, probes.github_ok, probes.action_catalog_ok])}/3 ok",
+                    file=sys.stderr,
+                )
+            else:
+                print("[aurora-policy] live probes: 3/3 ok")
         print(f"[aurora-policy] valid ({len(warnings)} warning(s))")
+        if live_failed:
+            return 3
         return 0 if not (args.strict and warnings) else 2
 
     if args.policy_cmd == "dry-run":
