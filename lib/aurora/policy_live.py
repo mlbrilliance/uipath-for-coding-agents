@@ -86,6 +86,13 @@ def _probe_orchestrator(client: httpx.Client) -> tuple[bool, list[str]]:
 
 
 def _probe_github(client: httpx.Client) -> tuple[bool, list[str]]:
+    """Verify GITHUB_ORG resolves to a real GitHub user or org.
+
+    Uses `/users/{name}` rather than `/repos/{name}` because the latter
+    needs `{owner}/{repo}` and 404s for an org-only check. `/users/`
+    works for both users AND orgs (GitHub's API treats them as the
+    same resource type), so this single probe covers both.
+    """
     org = os.environ.get("GITHUB_ORG")
     token = os.environ.get("GITHUB_TOKEN")
     if not org:
@@ -94,7 +101,7 @@ def _probe_github(client: httpx.Client) -> tuple[bool, list[str]]:
         return False, ["GITHUB_TOKEN is missing / not set in env"]
     try:
         resp = client.head(
-            f"https://api.github.com/repos/{org}",
+            f"https://api.github.com/users/{org}",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/vnd.github+json",
@@ -106,7 +113,7 @@ def _probe_github(client: httpx.Client) -> tuple[bool, list[str]]:
         return False, [f"github probe: network error ({e!s})"]
     if 200 <= resp.status_code < 300:
         return True, []
-    return False, [f"github probe: HTTP {resp.status_code}"]
+    return False, [f"github probe: HTTP {resp.status_code} for /users/{org}"]
 
 
 def _probe_action_catalog(client: httpx.Client) -> tuple[bool, list[str]]:
@@ -127,13 +134,39 @@ def _probe_action_catalog(client: httpx.Client) -> tuple[bool, list[str]]:
     # `missing` check above guarantees all four are non-None; assert for mypy.
     assert url is not None and token is not None and folder is not None and catalog is not None
     base = url.rstrip("/")
+
+    # `X-UIPATH-OrganizationUnitId` requires an integer folder ID, not a name.
+    # Resolve the folder name → id once via /odata/Folders, then use that.
     try:
+        f_resp = client.get(
+            f"{base}/odata/Folders",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=CATALOG_PROBE_TIMEOUT,
+        )
+        f_resp.raise_for_status()
+        folders = f_resp.json().get("value", [])
+        folder_id_match = next(
+            (f for f in folders
+             if f.get("DisplayName") == folder or f.get("FullyQualifiedName") == folder),
+            None,
+        )
+        if folder_id_match is None:
+            return False, [
+                f"action-catalog probe: folder {folder!r} not found in /odata/Folders"
+            ]
+        folder_id = str(folder_id_match["Id"])
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        logger.exception("action-catalog probe: folder resolution failed")
+        return False, [f"action-catalog probe: folder resolution failed ({e!s})"]
+
+    try:
+        # Use the OData TaskCatalogs endpoint — verified live.
         resp = client.get(
-            f"{base}/api/CatalogIdentity",
-            params={"name": catalog},
+            f"{base}/odata/TaskCatalogs",
+            params={"$filter": f"Name eq '{catalog}'"},
             headers={
                 "Authorization": f"Bearer {token}",
-                "X-UIPATH-OrganizationUnitId": folder,
+                "X-UIPATH-OrganizationUnitId": folder_id,
             },
             timeout=CATALOG_PROBE_TIMEOUT,
         )
@@ -147,10 +180,15 @@ def _probe_action_catalog(client: httpx.Client) -> tuple[bool, list[str]]:
             return False, [
                 f"action-catalog probe: HTTP {resp.status_code} but response not JSON"
             ]
-        if data.get("name") == catalog or data.get("id"):
+        # OData returns {"@odata.count": N, "value": [...]}.
+        items = data.get("value", [])
+        if items and any(item.get("Name") == catalog for item in items):
             return True, []
-        return False, [f"action-catalog probe: catalog {catalog!r} not found in response"]
-    return False, [f"action-catalog probe: HTTP {resp.status_code} (catalog {catalog!r} likely missing — runtime error 2451)"]
+        return False, [
+            f"action-catalog probe: catalog {catalog!r} not found in TaskCatalogs "
+            f"(runtime error 2451 will fire if Concierge tries to use it)"
+        ]
+    return False, [f"action-catalog probe: HTTP {resp.status_code} on /odata/TaskCatalogs"]
 
 
 def run_live_probes() -> LiveProbeResult:
