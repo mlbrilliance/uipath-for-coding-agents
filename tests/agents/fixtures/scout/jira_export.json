@@ -1,0 +1,14 @@
+{
+  "id": "scout-9a12b3c4d5e6",
+  "source": "jira:OPS-2371",
+  "ts": "2026-05-08T09:11:42Z",
+  "raw": "Reconciling Salesforce → Excel weekly takes the whole day; users keep complaining.",
+  "signal": {
+    "actor": "alice@example.com",
+    "frequency_hint": "weekly",
+    "duration_hint": "the whole day",
+    "pain_indicators": ["takes", "complaining"],
+    "system_hints": ["Salesforce", "Excel"],
+    "pain_hint": "Salesforce-Excel reconciliation"
+  }
+}
