@@ -47,8 +47,10 @@ if [[ "${SUCCESS}" != "true" ]] && [[ -n "${ERROR_MSG}" ]]; then
         }')
     echo "${EVENT_PAYLOAD}" >> "${EVENTS}"
 
+    # `-f` (not `-x`): we invoke via `python3 <path>` so +x is irrelevant.
+    # Using `-x` here was masking the bug where the script shipped without +x.
     FP_BIN="${CLAUDE_PROJECT_DIR:-.}/skills/aurora-fingerprint/scripts/cluster.py"
-    if [[ -x "${FP_BIN}" ]]; then
+    if [[ -f "${FP_BIN}" ]]; then
         TMP="$(mktemp)"
         echo "${EVENT_PAYLOAD}" > "${TMP}"
         python3 "${FP_BIN}" classify --event-file "${TMP}" >> "${LOG}" 2>&1 || true
