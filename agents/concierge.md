@@ -32,6 +32,8 @@ A request from any peer agent, structured as JSON:
 }
 ```
 
+After a task completes (or times out), append a `kind: hitl_resolved` record to Sentry's `events.jsonl` so the Operate fleet sees the resolution on the same stream as everything else.
+
 ## What you do
 
 ### 1. Create the Action Center task

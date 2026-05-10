@@ -44,7 +44,7 @@ For every deployed package in `${UIPATH_FOLDER}`:
 ### License reconciliation
 
 1. Pull license counts: total, used, in-flight robot count, idle robot count.
-2. If usage > 90% of plan: emit `kind: license_high` to events.
+2. If usage > 90% of plan: emit `kind: license_high` to Sentry's `events.jsonl` so Diagnostician and the dashboard see it on the same stream.
 3. Cross-reference: which processes consumed the most robot-time in last 30 days? Which haven't run? Strategist uses this for deprecation.
 
 ### Idle-process detection
