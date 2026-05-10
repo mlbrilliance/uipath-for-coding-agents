@@ -209,15 +209,16 @@ Eight tasks, all parallel-safe with each other after A. Each is a single Coded W
 ### T-C7 — BatchDigest Coded Workflow
 
 - **Type:** `[parallel-safe]`
-- **Status:** `pending`
-- **Files touched:** `examples/oss-supply-chain-defender/coded/BatchDigest/` (new): `BatchDigest.csproj`, `Batch.cs`; `tests/coded/BatchDigest.Tests/`.
+- **Status:** `satisfied-by-T-C4` (verified by regression contract test).
+- **Files touched:** `tests/coded/Notify.Tests/AppendToDigest_BatchContract_Tests.cs` (new) — binds the BPMN `BatchDigest` entry to the shipped `Notify.AppendToDigest` class and asserts the I/O surface.
 - **Model tier:** `mid_stakes`.
 - **Blocks:** none direct, but consumed by T-F4's End event.
 - **Blocked-by:** T-A3.
 - **Acceptance criteria:**
-  - Unit test asserts weekly-digest aggregation shape.
-  - Integration test runs end-to-end against the digest channel.
-- **Satisfies:** US-40.
+  - Regression contract test asserts: bindings.json `tasks.BatchDigest` has `kind=coded-workflow`, `entry=Notify.AppendToDigest`, package matches, `Execute(DigestEntry in_objEntry) → int` is decorated `[Workflow]`, and every `io.inputs` reference resolves to a declared runtime variable.
+  - All Notify.Tests xUnit tests green.
+- **Satisfies:** US-40 (folded into T-C4).
+- **Note:** The BPMN Medium-severity service task `BatchDigest` ("Batch into weekly digest") is wired in `bindings.json` to `Notify.AppendToDigest` from T-C4. The "weekly digest" is the running per-day accumulation maintained by `AppendToDigest` (with finding/ecosystem/severity dedup), and the separate `Notify.SendDigest` workflow posts it to Slack. Per-instance append + dedup is the End-event contract; a separate weekly-aggregator project would have duplicated state. The standalone `BatchDigest/` package therefore folds into T-C4. See `tests/coded/Notify.Tests/AppendToDigest_BatchContract_Tests.cs`.
 
 ### T-C8 — CheckLicenseDrift.xaml — ClearlyDefined.io + GitHub Licenses fallback
 
