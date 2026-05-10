@@ -241,6 +241,23 @@
         }
       }
     },
+    "webhook": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "github_check_run": {
+          "type": "object",
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Public URL where GitHub delivers check_run.completed events (via cloudflared tunnel)"
+            }
+          }
+        }
+      }
+    },
     "budget": {
       "type": "object",
       "required": ["daily_usd", "on_exceed"],
