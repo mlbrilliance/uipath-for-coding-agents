@@ -6,6 +6,13 @@ TDD contract assertions that define the expected behaviour of
 
 All HTTP calls are mocked with ``pytest-httpx`` so these run offline.
 Playwright is monkeypatched so no browser opens in CI.
+
+Fixture shape: captured from a live Studio Web Publish click 2026-05-12.
+The publish endpoint is
+``/{account}/studio_/backend/api/Solution/{solution_id}/Publish-Requests``
+with body keys ``packageName``/``locationKey``/``version``/``autoDeploy``/
+``locationFQN``/``withClientPackaging``. This is a tenant-level publish
+(not folder-scoped) — there is no ``X-UIPATH-OrganizationUnitId`` header.
 """
 from __future__ import annotations
 
@@ -19,10 +26,17 @@ from aurora.uipath_client import FolderRef, UiPathClient
 FIXTURE_REQ = Path(__file__).resolve().parents[1] / "fixtures" / "maestro" / "publish_request.json"
 FAKE_FOLDER_REF = FolderRef(name="AURORA-Demo", id=999)
 
-# When UIPATH_URL = https://cloud.example.test/acct/tenant/orchestrator_
-# the code strips /orchestrator_ and appends the fixture's url_path.
-# Result: https://cloud.example.test/acct/tenant/studio_/api/publish
-PUBLISH_URL = "https://cloud.example.test/acct/tenant/studio_/api/publish"
+ACCOUNT = "test-acct"
+TENANT_ID = "11111111-2222-3333-4444-555555555555"
+SOLUTION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+# When UIPATH_URL = https://cloud.example.test/test-acct/tenant/orchestrator_
+# the publish code strips /orchestrator_ + the account suffix, then appends
+# the fixture's url_path (which itself starts with "/{account}/...").
+PUBLISH_URL = (
+    f"https://cloud.example.test/{ACCOUNT}/studio_/backend/api/Solution/"
+    f"{SOLUTION_ID}/Publish-Requests"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -30,8 +44,11 @@ PUBLISH_URL = "https://cloud.example.test/acct/tenant/studio_/api/publish"
 # ---------------------------------------------------------------------------
 
 def _client(monkeypatch: pytest.MonkeyPatch) -> UiPathClient:
-    monkeypatch.setenv("UIPATH_URL", "https://cloud.example.test/acct/tenant/orchestrator_")
+    monkeypatch.setenv("UIPATH_URL", f"https://cloud.example.test/{ACCOUNT}/tenant/orchestrator_")
     monkeypatch.setenv("UIPATH_ACCESS_TOKEN", "fake-token")
+    monkeypatch.setenv("UIPATH_TENANT_ID", TENANT_ID)
+    monkeypatch.setenv("UIPATH_ACCOUNT_SLUG", ACCOUNT)
+    monkeypatch.setenv("UIPATH_SOLUTION_ID", SOLUTION_ID)
     client = UiPathClient(folder="AURORA-Demo")
     client.resolve_folder = lambda: FAKE_FOLDER_REF  # type: ignore[assignment]
     return client
@@ -43,8 +60,7 @@ def _client(monkeypatch: pytest.MonkeyPatch) -> UiPathClient:
 
 def test_publishes_with_recorded_fixture(httpx_mock: pytest.HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
     """The wrapper reads the captured fixture, builds a request matching its
-    shape (URL, method, content-type, body-keys), POSTs, and returns the
-    parsed response."""
+    shape (URL, method, body-keys), POSTs, and returns the parsed response."""
     httpx_mock.add_response(
         method="POST",
         url=PUBLISH_URL,
@@ -60,8 +76,9 @@ def test_publishes_with_recorded_fixture(httpx_mock: pytest.HTTPXMock, monkeypat
     requests = httpx_mock.get_requests()
     assert len(requests) == 1
     req = requests[0]
-    expected_path = json.loads(FIXTURE_REQ.read_text())["url_path"]
-    assert expected_path in str(req.url)
+    assert "/studio_/backend/api/Solution/" in str(req.url)
+    assert "/Publish-Requests" in str(req.url)
+    assert SOLUTION_ID in str(req.url)
     assert req.method == "POST"
 
 
@@ -70,23 +87,25 @@ def test_publishes_with_recorded_fixture(httpx_mock: pytest.HTTPXMock, monkeypat
 # ---------------------------------------------------------------------------
 
 def test_publish_request_has_required_headers(httpx_mock: pytest.HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Authorization Bearer + folder header + content-type are all set."""
-    monkeypatch.setenv("UIPATH_URL", "https://cloud.example.test/acct/tenant/orchestrator_")
-    monkeypatch.setenv("UIPATH_ACCESS_TOKEN", "fake-token")
+    """Authorization Bearer + tenant header + content-type are all set.
+
+    Studio Web's Solution publish is tenant-scoped, not folder-scoped, so
+    there's no X-UIPATH-OrganizationUnitId here — the tenant id is carried
+    in ``x-uipath-tenantid`` and the body's ``locationKey``."""
     httpx_mock.add_response(
         url=PUBLISH_URL,
         json={"version": "1.0.0"},
     )
-    client = UiPathClient(folder="AURORA-Demo")
-    client.resolve_folder = lambda: FAKE_FOLDER_REF  # type: ignore[assignment]
+    client = _client(monkeypatch)
     client.publish_maestro_project(
         project_dir=Path("/tmp/dummy"), version_bump="patch",
     )
     req = httpx_mock.get_requests()[-1]
-    assert req.headers["Authorization"] == "Bearer fake-token"
-    folder_header = req.headers.get("X-UIPATH-OrganizationUnitId") or req.headers.get("X-Uipath-Organizationunitid")
-    assert folder_header is not None
-    assert "json" in req.headers["Content-Type"].lower()
+    auth = req.headers.get("authorization") or req.headers.get("Authorization")
+    assert auth == "Bearer fake-token"
+    tenant = req.headers.get("x-uipath-tenantid") or req.headers.get("X-Uipath-Tenantid")
+    assert tenant == TENANT_ID
+    assert "json" in (req.headers.get("content-type") or req.headers.get("Content-Type") or "").lower()
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +157,26 @@ def test_publish_retries_on_5xx(httpx_mock: pytest.HTTPXMock, monkeypatch: pytes
 
 
 # ---------------------------------------------------------------------------
-# 5. UI fallback is invocable with the same signature
+# 5. Missing solution_id surfaces a clear error
+# ---------------------------------------------------------------------------
+
+def test_publish_without_solution_id_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If no solution_id can be resolved (no arg, no project metadata, no env),
+    surface a clear BusinessError rather than firing a malformed request."""
+    monkeypatch.setenv("UIPATH_URL", "https://cloud.example.test/x/y/orchestrator_")
+    monkeypatch.setenv("UIPATH_ACCESS_TOKEN", "fake-token")
+    monkeypatch.delenv("UIPATH_SOLUTION_ID", raising=False)
+    client = UiPathClient(folder="AURORA-Demo")
+    client.resolve_folder = lambda: FAKE_FOLDER_REF  # type: ignore[assignment]
+    with pytest.raises(Exception) as exc:
+        client.publish_maestro_project(
+            project_dir=Path("/tmp/no-such-proj"), version_bump="patch",
+        )
+    assert "solution_id" in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
+# 6. UI fallback is invocable with the same signature
 # ---------------------------------------------------------------------------
 
 def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -200,33 +238,46 @@ def test_ui_fallback_is_invocable(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 6. _build_publish_request is a pure helper
+# 7. _build_publish_request is a pure helper
 # ---------------------------------------------------------------------------
 
 def test_build_publish_request_pure_helper() -> None:
     """_build_publish_request reads the fixture and returns a dict with
-    url_path, method, headers, body — no I/O."""
+    url_path, method, headers, body — no I/O. All placeholders are
+    substituted."""
     from aurora.uipath_client import _build_publish_request
 
     req = _build_publish_request(
         fixture_path=FIXTURE_REQ,
         access_token="tok",
-        folder_id=42,
-        project_key="my-proj",
+        solution_id=SOLUTION_ID,
+        package_name="my-proj",
+        tenant_id=TENANT_ID,
+        account=ACCOUNT,
         version="1.0.1",
-        version_bump="patch",
     )
     assert req["method"] == "POST"
-    assert "/studio_/api/publish" in req["url_path"]
-    assert req["headers"]["Authorization"] == "Bearer tok"
-    assert req["headers"]["X-UIPATH-OrganizationUnitId"] == "42"
-    assert req["body"]["projectKey"] == "my-proj"
+    assert ACCOUNT in req["url_path"]
+    assert SOLUTION_ID in req["url_path"]
+    assert "/Publish-Requests" in req["url_path"]
+
+    auth = req["headers"].get("authorization") or req["headers"].get("Authorization")
+    assert auth == "Bearer tok"
+    tenant = req["headers"].get("x-uipath-tenantid") or req["headers"].get("X-Uipath-Tenantid")
+    assert tenant == TENANT_ID
+
+    assert req["body"]["packageName"] == "my-proj"
     assert req["body"]["version"] == "1.0.1"
-    assert req["body"]["versionBump"] == "patch"
+    assert req["body"]["locationKey"] == TENANT_ID
+    assert req["body"]["autoDeploy"] is False
+    # No unsubstituted placeholders remain
+    body_str = json.dumps(req["body"])
+    assert "{{" not in body_str
+    assert "{{" not in req["url_path"]
 
 
 # ---------------------------------------------------------------------------
-# 7. _parse_publish_response is a pure helper
+# 8. _parse_publish_response is a pure helper
 # ---------------------------------------------------------------------------
 
 def test_parse_publish_response_pure_helper() -> None:
@@ -236,3 +287,36 @@ def test_parse_publish_response_pure_helper() -> None:
     result = _parse_publish_response({"version": "2.0.0", "status": "Published"})
     assert result["version"] == "2.0.0"
     assert result["status"] == "Published"
+
+
+# ---------------------------------------------------------------------------
+# 9. _read_studio_web_solution_id picks up project-local metadata
+# ---------------------------------------------------------------------------
+
+def test_solution_id_resolved_from_project_metadata(tmp_path: Path) -> None:
+    """If project_dir/.studio-web/solution_id exists, _read_studio_web_solution_id
+    returns its content — letting us avoid env vars for the demo project."""
+    from aurora.uipath_client import _read_studio_web_solution_id
+
+    proj = tmp_path / "demo"
+    (proj / ".studio-web").mkdir(parents=True)
+    (proj / ".studio-web" / "solution_id").write_text(SOLUTION_ID + "\n")
+    assert _read_studio_web_solution_id(proj) == SOLUTION_ID
+
+
+def test_solution_id_resolved_from_project_json(tmp_path: Path) -> None:
+    """Fallback: project.json::studioWebSolutionId."""
+    from aurora.uipath_client import _read_studio_web_solution_id
+
+    proj = tmp_path / "demo"
+    proj.mkdir()
+    (proj / "project.json").write_text(json.dumps({"studioWebSolutionId": SOLUTION_ID}))
+    assert _read_studio_web_solution_id(proj) == SOLUTION_ID
+
+
+def test_solution_id_missing_returns_none(tmp_path: Path) -> None:
+    from aurora.uipath_client import _read_studio_web_solution_id
+
+    proj = tmp_path / "demo"
+    proj.mkdir()
+    assert _read_studio_web_solution_id(proj) is None
