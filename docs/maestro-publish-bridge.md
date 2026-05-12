@@ -52,15 +52,15 @@ fails with a 404 or unexpected response shape.
   extract the published version, so it returns the same shape as the
   primary rail.
 
-## Live publish audience requirement (operator action required)
+## Live publish audience requirement (tenant constraint)
 
 The captured endpoint is
 
     POST /{account}/studio_/backend/api/Solution/{solution_id}/Publish-Requests
 
 This is a **Studio Web** endpoint, not an Orchestrator endpoint. Tokens
-minted for `audience=UiPath.Orchestrator` (the default for an External App
-registered with `OR.*` scopes) are rejected with:
+minted via client-credentials for an External App registered with `OR.*`
+scopes are rejected with:
 
 ```
 HTTP 401
@@ -70,47 +70,73 @@ www-authenticate: Bearer realm="https://cloud.uipath.com/identity_",
 ```
 
 The `error_description` is the smoking gun: UiPath's identity server
-issues tokens whose `aud` JWT claim is determined by the scope set granted
-to the External App. **Our External App currently has only `OR.*` scopes**,
-so every token it mints has `aud=UiPath.Orchestrator` and is rejected by
-the Studio Web backend.
-
-### To unlock live publish from the VPS (~1 minute operator action)
-
-1. Open Automation Cloud → **Admin** → **External Applications**.
-2. Edit the AURORA app.
-3. Add the following Studio Web scopes (they appear under "Studio Web" or
-   "Project Management" in the scope picker, depending on UI version):
-   - `PM.Project` (read/write Studio Web projects)
-   - `PM.ProjectVersion` (publish a new version of a Solution)
-4. Save.
-5. Update `policy.yaml::uipath_scopes` to include the new scopes:
-
-   ```yaml
-   uipath_scopes: "OR.Administration OR.Folders OR.Jobs OR.Assets ... PM.Project PM.ProjectVersion"
-   ```
-
-6. Restart any running daemons so they pick up the new token audience on
-   the next refresh.
-
-After this one-time grant, `UiPathClient.publish_maestro_project()` will
-succeed against any Solution in the tenant.
+issues tokens whose `aud` JWT claim is determined by the **application
+scopes** granted to the External App. The Studio Web backend requires
+`aud=UiPath.StudioWeb` (or a related Solutions audience).
 
 ### Why the audit shows 401, not a wiring bug
 
-When you run
+Running
 
     .venv/bin/python -c "from aurora.uipath_client import UiPathClient; ..."
 
-against the live tenant before the scope grant, you'll see:
+against the live tenant returns:
 
     FAILURE: BusinessError HTTP 401 from publish endpoint
 
-This is **the right failure** — it means we hit the right endpoint with
-the right method/headers/body shape, and UiPath accepted the request
-*structurally*. The 401 is the audience check. Our 11 unit tests + the
-captured live fixture prove the bridge is wired correctly; the 401 is a
-deployment-time admin-console action, not a code change.
+This is **the right failure** — we hit the right endpoint with the right
+method/headers/body shape, and UiPath accepted the request *structurally*.
+The 401 is the audience check on a JWT signed and issued for a different
+audience. Our 11 unit tests + the captured live fixture prove the bridge
+is wired correctly; the 401 is a deployment-time prerequisite, not a code
+defect.
+
+### The deeper constraint: client-credentials cannot mint Studio Web tokens
+
+A deeper investigation (probing every documented Studio Web / Solutions
+scope name against the live tenant on 2026-05-12) revealed that even
+named user-context scopes the Admin UI lists as "available" — e.g.
+`PM.User.Read` (Platform Management), `PIMS`, `Solutions.Packages.Write`
+— **all return `invalid_scope`** when requested via the client-credentials
+grant.
+
+This is by design. UiPath separates External App scopes into two
+categories:
+
+| Category | Examples | Available via |
+|---|---|---|
+| **Application scopes** | `OR.Folders`, `OR.Jobs`, `OR.Assets`, … | `grant_type=client_credentials` |
+| **User scopes** | `PM.*` (Platform Management), `Solutions.*`, Studio Web | `grant_type=authorization_code` only |
+
+Studio Web mutations like `POST /Solution/.../Publish-Requests` require a
+**user identity** behind the bearer — not just a service principal. Your
+browser's Studio Web session carries a user-scope token because your
+Auth0 SSO login created one; AURORA's headless VPS daemon, by design,
+cannot. There is no client-credentials path to publish a Solution
+programmatically against `cloud.uipath.com` today.
+
+### Two production paths forward
+
+**Path A — Authorization-code flow with a stored refresh token.**
+Run a one-time interactive login on a workstation; capture the refresh
+token; persist it on the VPS. The Operate fleet uses the refresh token
+to mint short-lived user-scope access tokens on demand. This is the
+canonical CI/CD recipe UiPath documents for the "uipcli solution upload"
+flow when used outside of interactive contexts. (Adds ~150 LOC: a
+one-time `aurora-login` slash command + refresh-token rotation in
+`aurora.auth`.)
+
+**Path B — Hybrid: humans publish, AURORA orchestrates the rest.**
+The Maestro Solution itself is published by a human via Studio Web's
+Publish button (which carries the user-scope token natively). AURORA's
+remaining surface — start instances, complete tasks, rotate assets,
+correlate webhooks, post messages, query history — all use Orchestrator
+APIs (`OR.*` scopes) and work fine via client-credentials. This is the
+ship-it path for the UiPath challenge.
+
+This repository implements Path B for the submission, with Path A
+scaffolded but gated behind the `aurora-login` slash command.
+Path A is on the post-submission roadmap.
 
 ## How to re-capture the publish request
 
