@@ -110,14 +110,29 @@ tester: 14 tests written, 14 green, coverage 0.92 → ready-for-deploy
 
 ### 6:30 — Local validation green; publish to dev folder
 
-In the bottom-left pane:
+In the bottom-left pane, AURORA publishes everything that can be published headlessly via
+the Orchestrator API — the C# Coded Workflows and Python Coded Agents:
 
 ```
-$ uipath publish --folder AURORA-Demo-Dev
-[uipath] OssSupplyChainDefender@0.1.0 published
+$ uipath publish --folder AURORA-Demo
 [uipath] AuroraVulnLookup@0.1.0 published
-[uipath] AuroraSupplyChainDefender@0.1.0 published (XAML + coded workflows)
+[uipath] AuroraMaintainerHealth@0.1.0 published
+[uipath] OpenPatchPR@0.1.0 published
+[uipath] OpenAutoPR@0.1.0 published
+[uipath] ResolveLockfiles@0.1.0 published
+[uipath] Typosquat@0.1.0 published
+[uipath] Notify@0.1.0 published
+[uipath] PostPendingComment@0.1.0 published
 ```
+
+For the Maestro Solution itself, I switch to the Studio Web tab and click **Publish** — once.
+Narrate: *"Studio Web's Solution publish is the one operation UiPath reserves for a user-
+context token. AURORA captured the exact HTTP request shape (`tests/fixtures/maestro/publish_request.json`,
+committed in b294a53) and the bridge code is shape-correct against the live tenant — but
+publishing requires an authorization-code OAuth flow, not the client-credentials grant our
+headless daemon uses. So this first publish is the human's job. Every subsequent version bump
+runs headlessly through `UiPathClient.publish_maestro_project()`."* The Studio Web UI confirms:
+`OssSupplyChainDefender · published to Orchestrator Tenant · v1.0.0`.
 
 Auto-promote to test (per `policy.yaml::deploy.test.auto: true`).
 
@@ -173,13 +188,12 @@ Within 30-60 seconds:
 
 Surgeon's actions, visible in the dashboard's "Recent runs" stream:
 1. Identifies the cluster's prior remediation: rotate to `GITHUB_TOKEN_FALLBACK`
-2. Updates the Orchestrator Asset `GitHubToken` via the SDK
-3. Re-publishes the affected package
-4. Resumes the paused Maestro instance via the SDK's pause/resume API
+2. Updates the Orchestrator Asset `GitHubToken` via the SDK (live-verified, F5 receipt)
+3. Resumes the paused Maestro instance via the SDK's pause/resume API
 
 Within 90-120 seconds total: the instance retries and goes green.
 
-**Talking point**: "The Surgeon agent never asked the human anything. It rotated a credential, re-published a package, and resumed a Maestro instance — exactly the playbook the cluster's prior occurrences had recorded. If the same fingerprint had been novel, it would have escalated; with confidence 0.78, the policy says auto-fix."
+**Talking point**: "The Surgeon agent never asked the human anything. It rotated a credential against my live tenant and resumed a Maestro instance — exactly the playbook the cluster's prior occurrences had recorded. If the same fingerprint had been novel, it would have escalated; with confidence 0.78, the policy says auto-fix. The asset rotation is the F5 receipt you saw at the top of the demo — same code path."
 
 ### 10:30 — Strategist proposes consolidation
 
