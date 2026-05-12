@@ -124,12 +124,14 @@
     {
       "id": "C-DEMO-MAESTRO-PUBLISH",
       "section": "Maestro publish bridge",
-      "claim": "MaestroService.publish_maestro_project HTTP wrapper + Playwright capture tool + UI fallback.",
+      "claim": "UiPathClient.publish_maestro_project HTTP wrapper built against a real captured Studio Web Publish-Requests endpoint, with Playwright UI fallback. Submission ships Path B (humans publish initial Solution via Studio Web; AURORA owns headless version bumps + everything else via OR.* scopes); Path A (refresh-token user-scope bootstrap) is scaffolded behind aurora-login for post-submission.",
       "evidence": [
         "lib/aurora/uipath_client.py",
         "lib/aurora/playwright/capture.py",
         "lib/aurora/playwright/publish_ui_fallback.py",
+        "scripts/windows-capture-publish.py",
         "tests/unit/test_maestro_publish.py",
+        "tests/fixtures/maestro/publish_request.json",
         "docs/maestro-publish-bridge.md"
       ]
     },

@@ -289,31 +289,62 @@ class UiPathClient:
         project_dir: Path,
         version_bump: str = "patch",
         fixture_path: Path | None = None,
+        solution_id: str | None = None,
+        package_name: str | None = None,
+        tenant_id: str | None = None,
+        account: str | None = None,
     ) -> dict[str, Any]:
-        """Publish a Maestro project via the reverse-engineered Studio Web HTTP API.
+        """Publish a Maestro / Studio Web Solution via the captured Publish-Requests API.
 
         Reads the captured fixture to learn the URL path and request shape,
-        then replays it with the live OAuth bearer and folder context.
-        Retries on3x on5xx per R.E.02; surfaces=4xx per R.E.03.
+        then replays it with the live OAuth bearer and per-tenant identifiers.
+        Retries 3x on 5xx per R.E.02; surfaces 4xx per R.E.03.
+
+        Per-call params (all default-resolvable from project metadata / env):
+        - ``solution_id``  — Studio Web Solution UUID; falls back to
+                             ``project_dir/.studio-web/solution_id`` or env
+                             ``UIPATH_SOLUTION_ID``.
+        - ``package_name`` — display name in Orchestrator; defaults to
+                             project dir name.
+        - ``tenant_id``    — UiPath tenant UUID; falls back to env
+                             ``UIPATH_TENANT_ID``.
+        - ``account``      — account slug from the cloud URL (e.g. ``webfiji``);
+                             falls back to env ``UIPATH_ACCOUNT_SLUG``.
         """
         fixture = fixture_path or PUBLISH_FIXTURE_PATH
         access_token = os.environ.get("UIPATH_ACCESS_TOKEN", "")
-        folder_ref = self.resolve_folder()
-        project_key = project_dir.name
+
+        resolved_solution_id = (
+            solution_id
+            or _read_studio_web_solution_id(project_dir)
+            or os.environ.get("UIPATH_SOLUTION_ID", "")
+        )
+        if not resolved_solution_id:
+            raise BusinessError(
+                "publish_maestro_project requires solution_id "
+                "(arg, project_dir/.studio-web/solution_id, or UIPATH_SOLUTION_ID env)"
+            )
+        resolved_package_name = package_name or project_dir.name
+        resolved_tenant_id = tenant_id or os.environ.get("UIPATH_TENANT_ID", "")
+        resolved_account = account or os.environ.get("UIPATH_ACCOUNT_SLUG", "")
 
         version = _derive_next_version(project_dir, version_bump)
         req_spec = _build_publish_request(
             fixture_path=fixture,
             access_token=access_token,
-            folder_id=folder_ref.id,
-            project_key=project_key,
+            solution_id=resolved_solution_id,
+            package_name=resolved_package_name,
+            tenant_id=resolved_tenant_id,
+            account=resolved_account,
             version=version,
-            version_bump=version_bump,
         )
 
-        base_url = str(self.url).rstrip("/")
-        if base_url.endswith("/orchestrator_"):
-            base_url = base_url[: -len("/orchestrator_")]
+        # The captured url_path already embeds "/{account}/..." (Studio Web
+        # is account-scoped, not tenant-scoped). So we only want the
+        # scheme://host of UIPATH_URL — strip everything past it.
+        from urllib.parse import urlparse
+        parsed = urlparse(str(self.url))
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
         full_url = f"{base_url}{req_spec['url_path']}"
 
         logger.info("publishing maestro project: %s", project_dir)
@@ -390,14 +421,25 @@ class BusinessError(RuntimeError):
     """Non-retryable business-logic error (4xx from UiPath APIs)."""
 
 
+_PLACEHOLDER_KEYS = (
+    "UIPATH_ACCESS_TOKEN",
+    "tenant_id",
+    "solution_id",
+    "account",
+    "package_name",
+    "version",
+)
+
+
 def _build_publish_request(
     *,
     fixture_path: Path,
     access_token: str,
-    folder_id: int,
-    project_key: str,
+    solution_id: str,
+    package_name: str,
+    tenant_id: str,
+    account: str,
     version: str,
-    version_bump: str,
 ) -> dict[str, Any]:
     """Pure helper: read the captured fixture and build the request spec.
 
@@ -407,29 +449,57 @@ def _build_publish_request(
     if not fixture_path.exists():
         raise FileNotFoundError(f"publish fixture not found: {fixture_path}")
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
-    template_headers: dict[str, str] = fixture.get("headers", {})
-    template_body: dict[str, Any] = fixture.get("body", {})
 
-    headers: dict[str, str] = {}
-    for key, value in template_headers.items():
-        if "{{UIPATH_ACCESS_TOKEN}}" in value:
-            headers[key] = value.replace("{{UIPATH_ACCESS_TOKEN}}", access_token)
-        elif "{{folder_id}}" in value:
-            headers[key] = value.replace("{{folder_id}}", str(folder_id))
-        else:
-            headers[key] = value
+    substitutions = {
+        "UIPATH_ACCESS_TOKEN": access_token,
+        "tenant_id": tenant_id,
+        "solution_id": solution_id,
+        "account": account,
+        "package_name": package_name,
+        "version": version,
+    }
 
-    body = dict(template_body)
-    body["projectKey"] = project_key
-    body["version"] = version
-    body["versionBump"] = version_bump
+    def _subst(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        out = value
+        for key in _PLACEHOLDER_KEYS:
+            out = out.replace("{{" + key + "}}", substitutions[key])
+        return out
+
+    headers = {k: _subst(v) for k, v in fixture.get("headers", {}).items()}
+    body = {k: _subst(v) for k, v in fixture.get("body", {}).items()}
+    url_path = _subst(fixture.get("url_path", ""))
 
     return {
         "method": fixture.get("method", "POST"),
-        "url_path": fixture.get("url_path", "/studio_/api/publish"),
+        "url_path": url_path,
         "headers": headers,
         "body": body,
     }
+
+
+def _read_studio_web_solution_id(project_dir: Path) -> str | None:
+    """Read the Studio Web Solution UUID from project metadata if present.
+
+    Studio Web stores it under ``.studio-web/solution_id`` (one-line file)
+    or in ``project.json`` as ``studioWebSolutionId``. Return None if absent.
+    """
+    meta_file = project_dir / ".studio-web" / "solution_id"
+    if meta_file.exists():
+        value = meta_file.read_text(encoding="utf-8").strip()
+        if value:
+            return value
+    project_json = project_dir / "project.json"
+    if project_json.exists():
+        try:
+            data = json.loads(project_json.read_text(encoding="utf-8"))
+            sid = data.get("studioWebSolutionId")
+            if isinstance(sid, str) and sid:
+                return sid
+        except (json.JSONDecodeError, OSError):
+            pass
+    return None
 
 
 def _parse_publish_response(payload: dict[str, Any]) -> dict[str, Any]:

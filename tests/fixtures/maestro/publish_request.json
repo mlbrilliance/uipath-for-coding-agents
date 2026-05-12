@@ -1,18 +1,25 @@
 {
-  "synthetic": true,
-  "note": "SYNTHETIC fixture — reverse-engineered from Studio Web project structure. Re-capture via lib/aurora/playwright/capture.py when a live tenant is available.",
+  "synthetic": false,
+  "note": "Captured via scripts/windows-capture-publish.py on a live Studio Web session 2026-05-12. Placeholders {{account}}, {{tenant_id}}, {{solution_id}}, {{package_name}}, {{version}}, {{UIPATH_ACCESS_TOKEN}} are substituted at runtime by _build_publish_request().",
   "method": "POST",
-  "url_path": "/studio_/api/publish",
+  "url_path": "/{{account}}/studio_/backend/api/Solution/{{solution_id}}/Publish-Requests",
+  "url_query": "",
   "headers": {
-    "Authorization": "Bearer {{UIPATH_ACCESS_TOKEN}}",
-    "X-UIPATH-OrganizationUnitId": "{{folder_id}}",
-    "Content-Type": "application/json"
+    "authorization": "Bearer {{UIPATH_ACCESS_TOKEN}}",
+    "x-uipath-tenantid": "{{tenant_id}}",
+    "x-uipath-localization": "en",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
   },
   "body": {
-    "projectKey": "{{project_key}}",
+    "packageName": "{{package_name}}",
+    "packageDescription": "",
+    "packageReleaseNotes": "",
+    "locationKey": "{{tenant_id}}",
     "version": "{{version}}",
-    "versionBump": "patch",
-    "projectFiles": [],
-    "isLatest": true
+    "autoDeploy": false,
+    "locationFQN": "Orchestrator Tenant",
+    "withClientPackaging": false
   }
 }

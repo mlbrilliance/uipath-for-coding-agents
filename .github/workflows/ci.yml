@@ -2,12 +2,18 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/aurora-final-mile]
   pull_request:
     branches: [main]
 
+# Status check name `make ci` is what branch-protection rules should require.
+# Configure via Settings → Branches → Branch protection rules → main →
+# Require status checks to pass before merging → search "make ci".
+# Documented in CONTRIBUTING.md.
+
 jobs:
-  test:
+  ci:
+    name: make ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -25,9 +31,13 @@ jobs:
           source $HOME/.cargo/env || true
           uv sync --extra dev
 
-      - name: Validate policy.yaml (no env-var expansion)
+      # `make ci` runs lint + typecheck + tests + policy-strict in a single target,
+      # matching exactly what local `make ci` does. Branch-protection rule should
+      # require this check to pass before merge.
+      - name: make ci
         env:
-          # Provide stub values so env_expand resolves; CI doesn't need a real tenant
+          # Stub env vars so policy.yaml's ${VAR} placeholders resolve at
+          # validation time. CI doesn't need a real tenant.
           UIPATH_URL: https://cloud.uipath.com/ci/ci/orchestrator_
           UIPATH_CLIENT_ID: ci-stub
           UIPATH_CLIENT_SECRET: ci-stub
@@ -37,26 +47,18 @@ jobs:
           AURORA_HOME: /tmp/aurora-ci
           AURORA_MEMORY_DIR: /tmp/aurora-ci/memory
           AURORA_WORKTREE_DIR: /tmp/aurora-ci/worktrees
-          AURORA_SENTRY_INTERVAL: 30
-          AURORA_MAX_AUTO_FIXES_PER_DAY: 5
-          AURORA_DAILY_BUDGET_USD: 50
+          AURORA_SENTRY_INTERVAL: "30"
+          AURORA_MAX_AUTO_FIXES_PER_DAY: "5"
+          AURORA_DAILY_BUDGET_USD: "50"
           AURORA_MODEL_ARCHITECT: claude-opus-4-6
           AURORA_MODEL_FORGER: claude-sonnet-4-6
           AURORA_MODEL_REVIEWER: claude-sonnet-4-6
           AURORA_MODEL_SENTRY: claude-haiku-4-5-20251001
           AURORA_MODEL_DIAGNOSTICIAN: claude-opus-4-6
           AURORA_EMERGENCY_APPROVERS: ci@example.com
+          AURORA_WEBHOOK_GITHUB_CHECK_RUN_URL: https://aurora-webhook.example.invalid/github/check-run
           SLACK_CHANNEL_ID: C0CISTUB
-        run: uv run aurora policy validate
-
-      - name: Lint
-        run: uv run ruff check lib tests
-
-      - name: Typecheck
-        run: uv run mypy lib --no-strict-optional || true   # mypy strict mode is aspirational
-
-      - name: Unit tests
-        run: uv run pytest tests/unit -v --tb=short
+        run: make ci
 
       - name: Validate BPMN/DMN/JSON artifacts
         run: |
