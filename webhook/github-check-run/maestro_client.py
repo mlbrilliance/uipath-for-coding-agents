@@ -29,18 +29,36 @@ async def post_to_maestro(
         "Content-Type": "application/json",
     }
 
-    # 1. Resolve instance_id from pr_url
+    # 1. Resolve instance_id from pr_url.
+    # The Maestro instance-list endpoint may return non-JSON (HTML error page,
+    # empty body) when the Maestro process isn't deployed in the folder, or
+    # when the endpoint doesn't exist on this tenant version. Treat those
+    # cases as "no correlatable instance" and let the caller return 204.
     r = await client.get(
         f"{base}/maestro_/api/instances",
         params={"correlation.pr_url": pr_url, "$top": 1},
         headers=headers,
     )
-    r.raise_for_status()
-    instances = r.json().get("value", [])
+    if r.status_code >= 400:
+        logger.warning(
+            "maestro_lookup_http_error", pr_url=pr_url, status=r.status_code
+        )
+        return None
+    try:
+        instances = r.json().get("value", [])
+    except (ValueError, AttributeError):
+        # Non-JSON response or unexpected shape — treat as no-match.
+        logger.warning(
+            "maestro_lookup_non_json", pr_url=pr_url, body_preview=r.text[:200]
+        )
+        return None
     if not instances:
         logger.warning("no_maestro_instance_for_pr", pr_url=pr_url)
         return None
-    instance_id = instances[0]["id"]
+    instance_id = instances[0].get("id")
+    if not instance_id:
+        logger.warning("maestro_instance_missing_id", pr_url=pr_url, instance=instances[0])
+        return None
 
     # 2. Post the correlation message
     r = await client.post(
