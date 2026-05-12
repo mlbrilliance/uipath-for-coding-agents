@@ -66,8 +66,23 @@ from pathlib import Path
 
 # ---------------------------------------------------------------- config
 START_URL = "https://cloud.uipath.com/"
-PUBLISH_URL_PATTERN = re.compile(r"/studio_/api/.*publish", re.IGNORECASE)
+
+# Permissive match: anything that looks like a publish call on UiPath's
+# domain. We capture EVERY POST/PUT to a writes log too, so if this misses
+# the real publish call you can still send the writes log back and we'll
+# update the pattern.
+PUBLISH_URL_PATTERN = re.compile(
+    r"(/studio_/.*publish"
+    r"|/studio_/.*projects.*deploy"
+    r"|/studio_/api/.*deploy"
+    r"|/agentic-process/.*publish"
+    r"|/projects?/v[0-9]+/.*publish"
+    r"|/projects?/.*/versions"
+    r"|UploadPackage)",
+    re.IGNORECASE,
+)
 OUTPUT_PATH = Path.cwd() / "publish_request.json"
+WRITES_LOG_PATH = Path.cwd() / "all_writes.log"
 TIMEOUT_SECONDS = 600  # 10 minutes; plenty of time to log in + publish
 # -----------------------------------------------------------------------
 
@@ -86,30 +101,49 @@ def main() -> None:
         sys.exit(1)
 
     captured: dict | None = None
+    all_writes: list[dict] = []  # every POST/PUT for post-mortem if pattern misses
 
     def on_request(request) -> None:  # type: ignore[no-untyped-def]
         nonlocal captured
-        if captured is not None:
+        from urllib.parse import urlparse
+
+        if request.method not in {"POST", "PUT", "PATCH"}:
             return
-        if PUBLISH_URL_PATTERN.search(request.url) and request.method in {"POST", "PUT"}:
+
+        # Log every write request for diagnosis
+        parsed_url = urlparse(request.url)
+        if "uipath.com" in parsed_url.netloc or "uipath" in parsed_url.netloc:
+            try:
+                body_str = request.post_data or ""
+                body_preview = body_str[:300] if body_str else ""
+            except Exception:
+                body_preview = "(unreadable)"
+            all_writes.append({
+                "method": request.method,
+                "url": request.url,
+                "path": parsed_url.path,
+                "body_size": len(request.post_data or ""),
+                "body_preview": body_preview,
+            })
+            print(f"  [WRITE]  {request.method:4s} {parsed_url.path}")
+
+        if captured is None and PUBLISH_URL_PATTERN.search(request.url):
             try:
                 body = request.post_data
                 parsed = json.loads(body) if body else {}
             except Exception:
                 parsed = {"_raw_body_unparsable": True}
 
-            from urllib.parse import urlparse
-
             captured = {
                 "synthetic": False,
                 "note": "Captured via scripts/windows-capture-publish.py on a live Studio Web session.",
                 "method": request.method,
-                "url_path": urlparse(request.url).path,
-                "url_query": urlparse(request.url).query,
+                "url_path": parsed_url.path,
+                "url_query": parsed_url.query,
                 "headers": _sanitise_headers(dict(request.headers)),
                 "body": parsed,
             }
-            print(f"  ✓ captured: {request.method} {urlparse(request.url).path}")
+            print(f"  ✓ captured: {request.method} {parsed_url.path}")
 
     with sync_playwright() as p:
         print("Launching Chromium…")
@@ -165,11 +199,21 @@ def main() -> None:
 
         browser.close()
 
+    # Always write the writes log — useful even on success for triage.
+    if all_writes:
+        WRITES_LOG_PATH.write_text(
+            json.dumps(all_writes, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"  (logged {len(all_writes)} POST/PUT calls → {WRITES_LOG_PATH})")
+
     if captured is None:
         print(
-            f"\n✗ No publish request seen within {TIMEOUT_SECONDS // 60} minutes.\n"
-            "Did you click Publish? If yes, the URL pattern may have changed —\n"
-            "send me the JS bundle URL Studio Web loaded and I'll update the pattern.",
+            f"\n✗ No publish request matching the known patterns within "
+            f"{TIMEOUT_SECONDS // 60} minutes.\n"
+            f"BUT the writes log captured {len(all_writes)} POST/PUT calls.\n"
+            f"  Send me {WRITES_LOG_PATH.name} (or its contents) and I'll\n"
+            f"  identify which one is the real publish call and update the\n"
+            f"  pattern. The next run will catch it.\n",
             file=sys.stderr,
         )
         sys.exit(2)
