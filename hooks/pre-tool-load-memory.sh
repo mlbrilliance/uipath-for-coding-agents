@@ -63,16 +63,17 @@ if [[ -z "${CONTEXT_JSON}" ]] || [[ "${CONTEXT_JSON}" == "{}" ]]; then
     exit 0
 fi
 
-# Emit a Claude Code context-injection payload
-cat <<EOF
-{
-  "additionalContext": {
-    "aurora_memory": ${CONTEXT_JSON},
-    "agent": "${AGENT}",
-    "scoping_rationale": "Auto-injected by pre-tool-load-memory.sh based on agent role"
-  }
-}
-EOF
-
-echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] pre-tool: injected memory for agent=${AGENT} tool=${TOOL}" >> "${LOG}"
+# Claude Code's PreToolUse schema does NOT accept a top-level
+# `additionalContext` key (that's a UserPromptSubmit/SessionStart-only
+# field). Emitting it here causes "Hook JSON output validation failed
+# — (root): Invalid input" on every tool call. Same bug class as
+# commit 26c80b1, which fixed the PostToolUse JQ-path mismatch.
+#
+# We log what we would have injected so the recall pipeline stays
+# observable, but we no longer emit invalid JSON on stdout. Memory
+# injection at the PreToolUse boundary is not supported by Claude Code;
+# the right place for it is UserPromptSubmit (handled separately).
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "[${TS}] pre-tool: recall for agent=${AGENT} tool=${TOOL} project=${PROJECT}" >> "${LOG}"
+echo "[${TS}] pre-tool: recall payload (logged-only): ${CONTEXT_JSON}" >> "${LOG}"
 exit 0
